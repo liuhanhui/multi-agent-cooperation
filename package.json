@@ -1,0 +1,19 @@
+{
+  "name": "multi-agent-cooperation",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Platform layer above Agent CLIs for multi-agent team cooperation",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "pnpm -r run build",
+    "dev": "pnpm -r --parallel --filter @mac/api --filter @mac/web run dev",
+    "start": "node ./scripts/start.mjs",
+    "check": "pnpm check:iron-laws && pnpm -r --if-present run check && pnpm -r --if-present run typecheck",
+    "check:iron-laws": "node ./scripts/check-iron-laws.mjs",
+    "lint": "pnpm check",
+    "test": "pnpm -r --if-present run test"
+  }
+}
