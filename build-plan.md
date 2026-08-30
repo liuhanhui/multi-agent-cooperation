@@ -355,16 +355,17 @@ Ownership 总图：`docs/architecture/ownership/README.md`
 
 ## 决策记录（开工前钉死）
 
-1. **持久化：** Redis 是否可选降级（Clowder 有 `--memory`）？  
-2. **首发 adapter 顺序：** 哪个 CLI 第一、第二、第三？  
-3. **首发外部通道：** IM vs GitHub？  
-4. **桌面是否进 v1.0：** 还是 v1.0 仅源码+脚本？  
-5. **记忆第一期：** 只要证据检索，还是必须含 Profile lane？  
+**已钉死（2026-08-30）→ [`docs/DECISIONS.md`](./docs/DECISIONS.md)**
 
-把答案写进 M01，避免 Wave 4/5 返工。
+1. Redis 可选降级：是（默认 `MAC_STORE=memory`）
+2. Adapter 顺序：Claude Code → Codex → opencode
+3. 首发外部通道：GitHub signals
+4. 桌面：不进 v1.0 阻断线
+5. 记忆一期：Evidence + 检索；Profile 在 M17
 
 ---
 
 ## Changelog
 
+- 2026-08-30：M01/M02 开工 — monorepo scaffold + 决策钉死。
 - 2026-08-29：初版 — 6 Wave / 24 Milestone，对标 Clowder 开源完整度（参照 ownership cells，非 Fxxx 逐条复刻）。
