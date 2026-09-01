@@ -6,7 +6,7 @@ Platform layer **above** Agent CLIs so multiple model families work as one team.
 
 ## Status
 
-**Wave 0** — foundation (`feat/w0-foundation`): vision, iron laws, monorepo scaffold, `/health`.
+**Wave 1 / M03** — threads, messages, WebSocket hydration (`feat/m03-thread-message`).
 
 Roadmap: [`build-plan.md`](./build-plan.md) · Vision: [`docs/VISION.md`](./docs/VISION.md) · Decisions: [`docs/DECISIONS.md`](./docs/DECISIONS.md)
 

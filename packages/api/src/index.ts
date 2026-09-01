@@ -1,7 +1,7 @@
-import Fastify from "fastify";
-import type { HealthResponse } from "@mac/shared";
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
+import { buildApp } from "./create-app.js";
+import { createStore } from "./store/create-store.js";
 
 function loadEnvFile() {
   const path = join(process.cwd(), ".env");
@@ -20,24 +20,9 @@ function loadEnvFile() {
 loadEnvFile();
 
 const port = Number(process.env.MAC_API_PORT ?? 4010);
-const store = (process.env.MAC_STORE ?? "memory") === "redis" ? "redis" : "memory";
-const version = "0.0.1";
-
-const app = Fastify({ logger: true });
-
-app.get("/health", async (): Promise<HealthResponse> => ({
-  status: "ok",
-  service: "mac-api",
-  version,
-  store,
-  timestamp: new Date().toISOString(),
-}));
-
-app.get("/", async () => ({
-  name: "multi-agent-cooperation",
-  docs: ["docs/VISION.md", "build-plan.md"],
-  health: "/health",
-}));
+const storeKind = (process.env.MAC_STORE ?? "memory") === "redis" ? "redis" : "memory";
+const store = await createStore(storeKind);
+const app = await buildApp({ store, storeKind, version: "0.0.1" });
 
 await app.listen({ port, host: "127.0.0.1" });
-console.log(`[mac-api] listening on http://127.0.0.1:${port} (store=${store})`);
+console.log(`[mac-api] listening on http://127.0.0.1:${port} (store=${storeKind})`);
