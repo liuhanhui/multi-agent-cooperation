@@ -13,8 +13,8 @@ Why: one sentence
 | Cell | Status | Summary | First milestone |
 |------|--------|---------|-----------------|
 | `scaffold` | active | Monorepo, health, env, start scripts | M02 |
-| `transport` | planned | Local WS/SSE ingress; later connectors | M03 |
-| `bubble-pipeline` | planned | Message bubble identity + streaming merge | M03 / M06 |
+| `transport` | active | Local WS ingress + thread subscribe/hydrate | M03 |
+| `bubble-pipeline` | active (thin) | Message seq identity + streaming merge events | M03 |
 | `identity-session` | planned | Agent identity, session binding | M04 / M05 |
 | `dispatch` | planned | Invocation queue, cancel, busy gate | M08 |
 | `callback-auth` | planned | Invocation credentials for callbacks | M10 |
