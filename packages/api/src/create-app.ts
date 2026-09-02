@@ -1,6 +1,8 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import websocket from "@fastify/websocket";
 import type { HealthResponse, PlatformEvent } from "@mac/shared";
+import type { AgentProvider } from "./agents/types.js";
+import { runInvocation } from "./agents/run-invocation.js";
 import type { MacStore } from "./store/types.js";
 import { ThreadHub } from "./ws/thread-hub.js";
 
@@ -8,6 +10,7 @@ export interface AppOptions {
   store: MacStore;
   storeKind: "memory" | "redis";
   version?: string;
+  agent?: AgentProvider;
 }
 
 function chunkText(text: string, size = 3): string[] {
@@ -22,6 +25,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   const hub = new ThreadHub();
   const version = opts.version ?? "0.0.1";
   const { store } = opts;
+  const agent = opts.agent;
 
   await app.register(websocket);
 
@@ -31,6 +35,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     version,
     store: opts.storeKind,
     timestamp: new Date().toISOString(),
+    ...(agent ? { agent: agent.id } : {}),
   }));
 
   app.get("/", async () => ({
@@ -39,6 +44,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     health: "/health",
     api: {
       threads: "/api/threads",
+      invoke: "/api/threads/:id/messages/invoke",
       ws: "/ws?threadId=",
     },
   }));
@@ -88,6 +94,29 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     const event: PlatformEvent = { type: "message.created", message };
     hub.publish(thread.id, event);
     return reply.code(201).send({ message });
+  });
+
+  /** Invoke the configured AgentProvider and stream assistant output over WS. */
+  app.post<{
+    Params: { id: string };
+    Body: { content?: string; authorId?: string; systemSnippet?: string };
+  }>("/api/threads/:id/messages/invoke", async (req, reply) => {
+    if (!agent) return reply.code(503).send({ error: "No agent provider configured" });
+    const thread = await store.getThread(req.params.id);
+    if (!thread) return reply.code(404).send({ error: "Thread not found" });
+    const content = req.body?.content?.trim() ?? "";
+    if (!content) return reply.code(400).send({ error: "content required" });
+
+    const result = await runInvocation({
+      store,
+      hub,
+      agent,
+      threadId: thread.id,
+      prompt: content,
+      authorId: req.body?.authorId ?? "operator",
+      systemSnippet: req.body?.systemSnippet,
+    });
+    return reply.code(202).send(result);
   });
 
   /**

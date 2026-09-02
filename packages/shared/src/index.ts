@@ -8,6 +8,8 @@ export interface HealthResponse {
   version: string;
   store: "memory" | "redis";
   timestamp: string;
+  /** Active AgentProvider id when configured (M04+). */
+  agent?: string;
 }
 
 export interface AgentIdentity {

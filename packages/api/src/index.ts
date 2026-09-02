@@ -1,5 +1,8 @@
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
+import { createClaudeCodeProvider } from "./agents/claude-code-provider.js";
+import { createFakeAgentProvider } from "./agents/fake-provider.js";
+import type { AgentProvider } from "./agents/types.js";
 import { buildApp } from "./create-app.js";
 import { createStore } from "./store/create-store.js";
 
@@ -17,12 +20,21 @@ function loadEnvFile() {
   }
 }
 
+function createAgent(): AgentProvider {
+  const kind = (process.env.MAC_AGENT_PROVIDER ?? "claude-code").toLowerCase();
+  if (kind === "fake") return createFakeAgentProvider();
+  return createClaudeCodeProvider();
+}
+
 loadEnvFile();
 
 const port = Number(process.env.MAC_API_PORT ?? 4010);
 const storeKind = (process.env.MAC_STORE ?? "memory") === "redis" ? "redis" : "memory";
 const store = await createStore(storeKind);
-const app = await buildApp({ store, storeKind, version: "0.0.1" });
+const agent = createAgent();
+const app = await buildApp({ store, storeKind, agent, version: "0.0.1" });
 
 await app.listen({ port, host: "127.0.0.1" });
-console.log(`[mac-api] listening on http://127.0.0.1:${port} (store=${storeKind})`);
+console.log(
+  `[mac-api] listening on http://127.0.0.1:${port} (store=${storeKind}, agent=${agent.id})`,
+);
