@@ -367,6 +367,7 @@ Ownership 总图：`docs/architecture/ownership/README.md`
 
 ## Changelog
 
+- 2026-09-01：M04 — AgentProvider + Claude Code adapter；`POST .../messages/invoke`；fake provider 测试；失败气泡。
 - 2026-08-30：M03 — Thread CRUD、Message append、WS hydrate/`message.delta`/`message.completed`、memory+redis store port、web 双端订阅 demo。
 - 2026-08-30：M01/M02 开工 — monorepo scaffold + 决策钉死。
 - 2026-08-29：初版 — 6 Wave / 24 Milestone，对标 Clowder 开源完整度（参照 ownership cells，非 Fxxx 逐条复刻）。

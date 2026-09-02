@@ -15,7 +15,8 @@ Why: one sentence
 | `scaffold` | active | Monorepo, health, env, start scripts | M02 |
 | `transport` | active | Local WS ingress + thread subscribe/hydrate | M03 |
 | `bubble-pipeline` | active (thin) | Message seq identity + streaming merge events | M03 |
-| `identity-session` | planned | Agent identity, session binding | M04 / M05 |
+| `identity-session` | active (thin) | First AgentProvider invoke path | M04 |
+| `cli-integration` | active | Claude Code spawn/stdio → platform events | M04 |
 | `dispatch` | planned | Invocation queue, cancel, busy gate | M08 |
 | `callback-auth` | planned | Invocation credentials for callbacks | M10 |
 | `routing-context` | planned | @mention + live routing projection | M07 |

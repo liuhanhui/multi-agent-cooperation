@@ -113,13 +113,15 @@ export function App() {
     setActiveId(data.thread.id);
   }
 
-  async function sendMessage(mode: "append" | "echo") {
+  async function sendMessage(mode: "invoke" | "append" | "echo") {
     if (!activeId || !draft.trim()) return;
     setError(null);
     const path =
       mode === "echo"
         ? `/api/threads/${activeId}/messages/stream-echo`
-        : `/api/threads/${activeId}/messages`;
+        : mode === "invoke"
+          ? `/api/threads/${activeId}/messages/invoke`
+          : `/api/threads/${activeId}/messages`;
     const res = await fetch(path, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -138,10 +140,14 @@ export function App() {
       <header className="top">
         <p className="brand">Multi-Agent Cooperation</p>
         <p className="lede tight">
-          M03 demo — threads, append, stream-echo, WS hydration. Open two tabs on the same thread.
+          M04 — Send invokes Claude Code (or fake). Echo stream stays as a no-CLI demo.
         </p>
         <p className="meta">
-          health: {health ? `${health.status}/${health.store}` : "…"} · ws: {wsState}
+          health:{" "}
+          {health
+            ? `${health.status}/${health.store}${health.agent ? `/${health.agent}` : ""}`
+            : "…"}{" "}
+          · ws: {wsState}
         </p>
         {error ? <p className="err">{error}</p> : null}
       </header>
@@ -188,7 +194,14 @@ export function App() {
                         #{m.seq} · {m.status}
                       </span>
                     </header>
-                    <p>{m.content || (m.status === "streaming" ? "…" : "")}</p>
+                    <p>
+                      {m.content ||
+                        (m.status === "streaming"
+                          ? "…"
+                          : m.status === "failed"
+                            ? (m.error ?? "failed")
+                            : "")}
+                    </p>
                   </article>
                 ))}
                 <div ref={messagesEnd} />
@@ -197,7 +210,7 @@ export function App() {
                 className="composer"
                 onSubmit={(e) => {
                   e.preventDefault();
-                  void sendMessage("append");
+                  void sendMessage("invoke");
                 }}
               >
                 <input

@@ -2,12 +2,13 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { WebSocket } from "ws";
 import type { PlatformEvent, Thread } from "@mac/shared";
+import { createFakeAgentProvider } from "./agents/fake-provider.js";
 import { buildApp } from "./create-app.js";
 import { createMemoryStore } from "./store/memory-store.js";
 
-async function listen() {
+async function listen(agent = createFakeAgentProvider({ delayMs: 0 })) {
   const store = createMemoryStore();
-  const app = await buildApp({ store, storeKind: "memory" });
+  const app = await buildApp({ store, storeKind: "memory", agent });
   await app.listen({ port: 0, host: "127.0.0.1" });
   const address = app.server.address();
   assert.ok(address && typeof address === "object");
@@ -200,6 +201,102 @@ test("stream-echo emits user message then assistant delta/completed", async () =
     assert.ok(seen.includes("user:completed"));
     assert.ok(seen.includes("assistant:pending"));
     ws.close();
+  } finally {
+    await app.close();
+  }
+});
+
+test("invoke streams fake agent reply into assistant bubble", async () => {
+  const { app, port } = await listen(
+    createFakeAgentProvider({ chunks: ["Hel", "lo"], delayMs: 0 }),
+  );
+  try {
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/threads",
+      payload: { title: "invoke" },
+    });
+    const threadId = (created.json() as { thread: Thread }).thread.id;
+    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws?threadId=${threadId}`);
+    await onceEvent(ws, "thread.hydrated");
+
+    const deltas: string[] = [];
+    const done = new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error("invoke timeout")), 5000);
+      ws.on("message", (raw) => {
+        const event = JSON.parse(String(raw)) as PlatformEvent;
+        if (event.type === "message.delta") deltas.push(event.delta);
+        if (event.type === "message.completed") {
+          clearTimeout(timer);
+          assert.equal(event.message.authorId, "fake");
+          assert.equal(event.message.content, "Hello");
+          resolve();
+        }
+      });
+    });
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/threads/${threadId}/messages/invoke`,
+      payload: { content: "say hi" },
+    });
+    assert.equal(res.statusCode, 202);
+    await done;
+    assert.equal(deltas.join(""), "Hello");
+    ws.close();
+  } finally {
+    await app.close();
+  }
+});
+
+test("invoke surfaces provider failure as message.failed", async () => {
+  const { app, port } = await listen(createFakeAgentProvider({ failWith: "provider crashed" }));
+  try {
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/threads",
+      payload: { title: "fail" },
+    });
+    const threadId = (created.json() as { thread: Thread }).thread.id;
+    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws?threadId=${threadId}`);
+    await onceEvent(ws, "thread.hydrated");
+
+    const failed = onceEvent(ws, "message.failed");
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/threads/${threadId}/messages/invoke`,
+      payload: { content: "boom" },
+    });
+    assert.equal(res.statusCode, 202);
+    const event = await failed;
+    assert.equal(event.type, "message.failed");
+    if (event.type === "message.failed") {
+      assert.equal(event.error, "provider crashed");
+      assert.equal(event.message.status, "failed");
+    }
+    ws.close();
+  } finally {
+    await app.close();
+  }
+});
+
+test("invoke without agent returns 503", async () => {
+  const store = createMemoryStore();
+  const app = await buildApp({ store, storeKind: "memory" });
+  await app.listen({ port: 0, host: "127.0.0.1" });
+  try {
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/threads",
+      payload: { title: "no-agent" },
+    });
+    const threadId = (created.json() as { thread: Thread }).thread.id;
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/threads/${threadId}/messages/invoke`,
+      payload: { content: "hi" },
+    });
+    assert.equal(res.statusCode, 503);
   } finally {
     await app.close();
   }
