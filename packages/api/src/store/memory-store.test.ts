@@ -9,6 +9,31 @@ test("createThread assigns id and zero lastSeq", async () => {
   assert.equal(thread.title, "demo");
   assert.equal(thread.status, "active");
   assert.equal(thread.lastSeq, 0);
+  assert.deepEqual(thread.memberIds, []);
+  assert.equal(thread.defaultCatId, null);
+});
+
+test("updateThreadMembers enforces defaultCatId ∈ memberIds", async () => {
+  const store = createMemoryStore();
+  const thread = await store.createThread({
+    memberIds: ["architect", "reviewer"],
+    defaultCatId: "architect",
+  });
+  const updated = await store.updateThreadMembers({
+    threadId: thread.id,
+    memberIds: ["architect", "reviewer"],
+    defaultCatId: "reviewer",
+  });
+  assert.equal(updated.defaultCatId, "reviewer");
+  await assert.rejects(
+    () =>
+      store.updateThreadMembers({
+        threadId: thread.id,
+        memberIds: ["architect"],
+        defaultCatId: "reviewer",
+      }),
+    /must be in memberIds/,
+  );
 });
 
 test("appendMessage assigns monotonic seq and updates thread.lastSeq", async () => {

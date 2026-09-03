@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { createClaudeCodeProvider } from "./agents/claude-code-provider.js";
 import { createFakeAgentProvider } from "./agents/fake-provider.js";
 import type { AgentProvider } from "./agents/types.js";
+import { loadCatRegistry } from "./cats/load-cat-config.js";
 import { buildApp } from "./create-app.js";
 import { createStore } from "./store/create-store.js";
 
@@ -32,9 +33,10 @@ const port = Number(process.env.MAC_API_PORT ?? 4010);
 const storeKind = (process.env.MAC_STORE ?? "memory") === "redis" ? "redis" : "memory";
 const store = await createStore(storeKind);
 const agent = createAgent();
-const app = await buildApp({ store, storeKind, agent, version: "0.0.1" });
+const cats = loadCatRegistry();
+const app = await buildApp({ store, storeKind, agent, cats, version: "0.0.1" });
 
 await app.listen({ port, host: "127.0.0.1" });
 console.log(
-  `[mac-api] listening on http://127.0.0.1:${port} (store=${storeKind}, agent=${agent.id})`,
+  `[mac-api] listening on http://127.0.0.1:${port} (store=${storeKind}, agent=${agent.id}, cats=${cats.list().length})`,
 );

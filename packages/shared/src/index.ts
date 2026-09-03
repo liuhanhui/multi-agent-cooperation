@@ -19,6 +19,20 @@ export interface AgentIdentity {
   provider: string;
 }
 
+/**
+ * Cat registry entry (M05). Loaded read-only from agent-config.json.
+ * Never put secrets (apiKey / token / password) in this file.
+ */
+export interface CatConfig {
+  id: string;
+  displayName: string;
+  role: string;
+  provider: string;
+  systemSnippet?: string;
+  /** Optional model hint for future adapters */
+  defaultModel?: string;
+}
+
 export type ThreadStatus = "active" | "archived";
 
 export interface Thread {
@@ -28,6 +42,10 @@ export interface Thread {
   createdAt: string;
   updatedAt: string;
   lastSeq: number;
+  /** Cat ids bound to this thread (subset of registry). */
+  memberIds: string[];
+  /** Default collaborator for the next invoke (must be in memberIds when set). */
+  defaultCatId: string | null;
 }
 
 /** @deprecated use Thread — kept for Wave 0 callers */

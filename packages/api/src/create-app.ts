@@ -3,6 +3,7 @@ import websocket from "@fastify/websocket";
 import type { HealthResponse, PlatformEvent } from "@mac/shared";
 import type { AgentProvider } from "./agents/types.js";
 import { runInvocation } from "./agents/run-invocation.js";
+import type { CatRegistry } from "./cats/load-cat-config.js";
 import type { MacStore } from "./store/types.js";
 import { ThreadHub } from "./ws/thread-hub.js";
 
@@ -11,6 +12,7 @@ export interface AppOptions {
   storeKind: "memory" | "redis";
   version?: string;
   agent?: AgentProvider;
+  cats?: CatRegistry;
 }
 
 function chunkText(text: string, size = 3): string[] {
@@ -26,6 +28,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   const version = opts.version ?? "0.0.1";
   const { store } = opts;
   const agent = opts.agent;
+  const cats = opts.cats;
 
   await app.register(websocket);
 
@@ -44,25 +47,88 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     health: "/health",
     api: {
       threads: "/api/threads",
+      cats: "/api/cats",
       invoke: "/api/threads/:id/messages/invoke",
       ws: "/ws?threadId=",
     },
   }));
+
+  app.get("/api/cats", async () => {
+    return { cats: cats?.list() ?? [] };
+  });
 
   app.get("/api/threads", async () => {
     const threads = await store.listThreads();
     return { threads };
   });
 
-  app.post<{ Body: { title?: string } }>("/api/threads", async (req, reply) => {
-    const thread = await store.createThread({ title: req.body?.title });
-    return reply.code(201).send({ thread });
-  });
+  app.post<{ Body: { title?: string; memberIds?: string[]; defaultCatId?: string | null } }>(
+    "/api/threads",
+    async (req, reply) => {
+      const registryIds = cats?.list().map((c) => c.id) ?? [];
+      const memberIds = req.body?.memberIds ?? registryIds;
+      const defaultCatId =
+        req.body?.defaultCatId !== undefined
+          ? req.body.defaultCatId
+          : (cats?.defaultCatId() ?? memberIds[0] ?? null);
+      for (const id of memberIds) {
+        if (cats && !cats.get(id)) {
+          return reply.code(400).send({ error: `Unknown cat id: ${id}` });
+        }
+      }
+      if (defaultCatId && cats && !cats.get(defaultCatId)) {
+        return reply.code(400).send({ error: `Unknown defaultCatId: ${defaultCatId}` });
+      }
+      try {
+        const thread = await store.createThread({
+          title: req.body?.title,
+          memberIds,
+          defaultCatId,
+        });
+        return reply.code(201).send({ thread });
+      } catch (err) {
+        return reply.code(400).send({
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    },
+  );
 
   app.get<{ Params: { id: string } }>("/api/threads/:id", async (req, reply) => {
     const thread = await store.getThread(req.params.id);
     if (!thread) return reply.code(404).send({ error: "Thread not found" });
     return { thread };
+  });
+
+  app.patch<{
+    Params: { id: string };
+    Body: { memberIds?: string[]; defaultCatId?: string | null };
+  }>("/api/threads/:id/members", async (req, reply) => {
+    const thread = await store.getThread(req.params.id);
+    if (!thread) return reply.code(404).send({ error: "Thread not found" });
+    const memberIds = req.body?.memberIds ?? thread.memberIds;
+    const defaultCatId =
+      req.body?.defaultCatId !== undefined ? req.body.defaultCatId : thread.defaultCatId;
+    for (const id of memberIds) {
+      if (cats && !cats.get(id)) {
+        return reply.code(400).send({ error: `Unknown cat id: ${id}` });
+      }
+    }
+    if (defaultCatId && cats && !cats.get(defaultCatId)) {
+      return reply.code(400).send({ error: `Unknown defaultCatId: ${defaultCatId}` });
+    }
+    try {
+      const updated = await store.updateThreadMembers({
+        threadId: thread.id,
+        memberIds,
+        defaultCatId,
+      });
+      return { thread: updated };
+    } catch (err) {
+      return reply.code(400).send({
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
   });
 
   app.get<{ Params: { id: string }; Querystring: { afterSeq?: string } }>(
@@ -99,13 +165,25 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   /** Invoke the configured AgentProvider and stream assistant output over WS. */
   app.post<{
     Params: { id: string };
-    Body: { content?: string; authorId?: string; systemSnippet?: string };
+    Body: { content?: string; authorId?: string; systemSnippet?: string; catId?: string };
   }>("/api/threads/:id/messages/invoke", async (req, reply) => {
     if (!agent) return reply.code(503).send({ error: "No agent provider configured" });
     const thread = await store.getThread(req.params.id);
     if (!thread) return reply.code(404).send({ error: "Thread not found" });
     const content = req.body?.content?.trim() ?? "";
     if (!content) return reply.code(400).send({ error: "content required" });
+
+    const catId = req.body?.catId ?? thread.defaultCatId;
+    if (!catId) {
+      return reply.code(400).send({ error: "No default cat configured for this thread" });
+    }
+    if (thread.memberIds.length > 0 && !thread.memberIds.includes(catId)) {
+      return reply.code(400).send({ error: `Cat ${catId} is not a member of this thread` });
+    }
+    const cat = cats?.get(catId);
+    if (cats && !cat) {
+      return reply.code(400).send({ error: `Unknown cat id: ${catId}` });
+    }
 
     const result = await runInvocation({
       store,
@@ -114,9 +192,10 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
       threadId: thread.id,
       prompt: content,
       authorId: req.body?.authorId ?? "operator",
-      systemSnippet: req.body?.systemSnippet,
+      assistantAuthorId: catId,
+      systemSnippet: req.body?.systemSnippet ?? cat?.systemSnippet,
     });
-    return reply.code(202).send(result);
+    return reply.code(202).send({ ...result, catId });
   });
 
   /**
