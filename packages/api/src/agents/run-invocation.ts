@@ -10,6 +10,8 @@ export interface RunInvocationParams {
   threadId: string;
   prompt: string;
   authorId?: string;
+  /** Cat id shown as assistant bubble author (M05). Defaults to agent.id. */
+  assistantAuthorId?: string;
   systemSnippet?: string;
   cwd?: string;
   timeoutMs?: number;
@@ -29,6 +31,7 @@ export async function runInvocation(params: RunInvocationParams): Promise<RunInv
     threadId,
     prompt,
     authorId = "operator",
+    assistantAuthorId,
     systemSnippet,
     cwd,
     timeoutMs,
@@ -46,7 +49,7 @@ export async function runInvocation(params: RunInvocationParams): Promise<RunInv
   const assistantMessage = await store.appendMessage({
     threadId,
     role: "assistant",
-    authorId: agent.id,
+    authorId: assistantAuthorId ?? agent.id,
     content: "",
     status: "pending",
   });

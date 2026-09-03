@@ -6,7 +6,7 @@ Platform layer **above** Agent CLIs so multiple model families work as one team.
 
 ## Status
 
-**Wave 1 / M04** — first AgentProvider (Claude Code) via `.../messages/invoke` (`feat/m04-agent-adapter`).
+**Wave 1 / M05** — cat registry + thread default collaborator (`feat/m05-cat-identity`).
 
 Roadmap: [`build-plan.md`](./build-plan.md) · Vision: [`docs/VISION.md`](./docs/VISION.md) · Decisions: [`docs/DECISIONS.md`](./docs/DECISIONS.md)
 

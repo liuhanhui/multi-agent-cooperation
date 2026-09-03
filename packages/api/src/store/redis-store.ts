@@ -1,7 +1,12 @@
 import { createClient, type RedisClientType } from "redis";
 import { randomUUID } from "node:crypto";
 import type { Message, Thread } from "@mac/shared";
-import type { AppendMessageInput, CreateThreadInput, MacStore } from "./types.js";
+import type {
+  AppendMessageInput,
+  CreateThreadInput,
+  MacStore,
+  UpdateThreadMembersInput,
+} from "./types.js";
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -21,6 +26,27 @@ function threadMessagesKey(id: string): string {
 
 const THREAD_INDEX = "mac:threads";
 
+function normalizeMembers(
+  memberIds: string[] | undefined,
+  defaultCatId: string | null | undefined,
+): { memberIds: string[]; defaultCatId: string | null } {
+  const members = [...new Set((memberIds ?? []).map((id) => id.trim()).filter(Boolean))];
+  let def = defaultCatId ?? null;
+  if (def && !members.includes(def)) {
+    throw new Error(`defaultCatId "${def}" must be in memberIds`);
+  }
+  if (!def && members.length > 0) def = members[0] ?? null;
+  return { memberIds: members, defaultCatId: def };
+}
+
+function hydrateThread(thread: Thread): Thread {
+  return {
+    ...thread,
+    memberIds: thread.memberIds ?? [],
+    defaultCatId: thread.defaultCatId ?? null,
+  };
+}
+
 export async function createRedisStore(url: string): Promise<MacStore> {
   const client: RedisClientType = createClient({ url });
   client.on("error", (err) => {
@@ -30,7 +56,7 @@ export async function createRedisStore(url: string): Promise<MacStore> {
 
   async function readThread(id: string): Promise<Thread | null> {
     const raw = await client.get(threadKey(id));
-    return raw ? (JSON.parse(raw) as Thread) : null;
+    return raw ? hydrateThread(JSON.parse(raw) as Thread) : null;
   }
 
   async function writeThread(thread: Thread): Promise<void> {
@@ -49,6 +75,7 @@ export async function createRedisStore(url: string): Promise<MacStore> {
   const store: MacStore = {
     async createThread(input: CreateThreadInput): Promise<Thread> {
       const ts = nowIso();
+      const { memberIds, defaultCatId } = normalizeMembers(input.memberIds, input.defaultCatId);
       const thread: Thread = {
         id: randomUUID(),
         title: input.title?.trim() || "Untitled thread",
@@ -56,6 +83,8 @@ export async function createRedisStore(url: string): Promise<MacStore> {
         createdAt: ts,
         updatedAt: ts,
         lastSeq: 0,
+        memberIds,
+        defaultCatId,
       };
       await writeThread(thread);
       return thread;
@@ -73,6 +102,17 @@ export async function createRedisStore(url: string): Promise<MacStore> {
         if (t) out.push(t);
       }
       return out;
+    },
+
+    async updateThreadMembers(input: UpdateThreadMembersInput): Promise<Thread> {
+      const thread = await readThread(input.threadId);
+      if (!thread) throw new Error(`Thread not found: ${input.threadId}`);
+      const { memberIds, defaultCatId } = normalizeMembers(input.memberIds, input.defaultCatId);
+      thread.memberIds = memberIds;
+      thread.defaultCatId = defaultCatId;
+      thread.updatedAt = nowIso();
+      await writeThread(thread);
+      return thread;
     },
 
     async appendMessage(input: AppendMessageInput): Promise<Message> {

@@ -3,12 +3,31 @@ import { test } from "node:test";
 import { WebSocket } from "ws";
 import type { PlatformEvent, Thread } from "@mac/shared";
 import { createFakeAgentProvider } from "./agents/fake-provider.js";
+import type { AgentInvokeInput, AgentProvider, AgentStreamEvent } from "./agents/types.js";
+import { createCatRegistry } from "./cats/load-cat-config.js";
 import { buildApp } from "./create-app.js";
 import { createMemoryStore } from "./store/memory-store.js";
 
+const demoCats = createCatRegistry([
+  {
+    id: "architect",
+    displayName: "Architect",
+    role: "architecture",
+    provider: "fake",
+    systemSnippet: "sys-architect",
+  },
+  {
+    id: "reviewer",
+    displayName: "Reviewer",
+    role: "review",
+    provider: "fake",
+    systemSnippet: "sys-reviewer",
+  },
+]);
+
 async function listen(agent = createFakeAgentProvider({ delayMs: 0 })) {
   const store = createMemoryStore();
-  const app = await buildApp({ store, storeKind: "memory", agent });
+  const app = await buildApp({ store, storeKind: "memory", agent, cats: demoCats });
   await app.listen({ port: 0, host: "127.0.0.1" });
   const address = app.server.address();
   assert.ok(address && typeof address === "object");
@@ -228,7 +247,7 @@ test("invoke streams fake agent reply into assistant bubble", async () => {
         if (event.type === "message.delta") deltas.push(event.delta);
         if (event.type === "message.completed") {
           clearTimeout(timer);
-          assert.equal(event.message.authorId, "fake");
+          assert.equal(event.message.authorId, "architect");
           assert.equal(event.message.content, "Hello");
           resolve();
         }
@@ -282,7 +301,7 @@ test("invoke surfaces provider failure as message.failed", async () => {
 
 test("invoke without agent returns 503", async () => {
   const store = createMemoryStore();
-  const app = await buildApp({ store, storeKind: "memory" });
+  const app = await buildApp({ store, storeKind: "memory", cats: demoCats });
   await app.listen({ port: 0, host: "127.0.0.1" });
   try {
     const created = await app.inject({
@@ -297,6 +316,86 @@ test("invoke without agent returns 503", async () => {
       payload: { content: "hi" },
     });
     assert.equal(res.statusCode, 503);
+  } finally {
+    await app.close();
+  }
+});
+
+test("GET /api/cats lists registry", async () => {
+  const { app } = await listen();
+  try {
+    const res = await app.inject({ method: "GET", url: "/api/cats" });
+    assert.equal(res.statusCode, 200);
+    const body = res.json() as { cats: { id: string }[] };
+    assert.equal(body.cats.length, 2);
+    assert.deepEqual(
+      body.cats.map((c) => c.id),
+      ["architect", "reviewer"],
+    );
+  } finally {
+    await app.close();
+  }
+});
+
+test("createThread seeds members from cat registry", async () => {
+  const { app } = await listen();
+  try {
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/threads",
+      payload: { title: "with-cats" },
+    });
+    assert.equal(created.statusCode, 201);
+    const thread = (created.json() as { thread: Thread }).thread;
+    assert.deepEqual(thread.memberIds, ["architect", "reviewer"]);
+    assert.equal(thread.defaultCatId, "architect");
+  } finally {
+    await app.close();
+  }
+});
+
+test("switching defaultCatId changes next invoke systemSnippet and author", async () => {
+  const calls: AgentInvokeInput[] = [];
+  const agent: AgentProvider = {
+    id: "fake",
+    async *invoke(input: AgentInvokeInput): AsyncIterable<AgentStreamEvent> {
+      calls.push(input);
+      yield { type: "completed", text: "ok" };
+    },
+  };
+  const { app, port } = await listen(agent);
+  try {
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/threads",
+      payload: { title: "switch-default" },
+    });
+    const threadId = (created.json() as { thread: Thread }).thread.id;
+
+    const patched = await app.inject({
+      method: "PATCH",
+      url: `/api/threads/${threadId}/members`,
+      payload: { defaultCatId: "reviewer" },
+    });
+    assert.equal(patched.statusCode, 200);
+    assert.equal((patched.json() as { thread: Thread }).thread.defaultCatId, "reviewer");
+
+    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws?threadId=${threadId}`);
+    await onceEvent(ws, "thread.hydrated");
+    const completed = onceEvent(ws, "message.completed");
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/threads/${threadId}/messages/invoke`,
+      payload: { content: "review please" },
+    });
+    assert.equal(res.statusCode, 202);
+    const event = await completed;
+    assert.equal(event.type, "message.completed");
+    if (event.type === "message.completed") {
+      assert.equal(event.message.authorId, "reviewer");
+    }
+    assert.equal(calls.at(-1)?.systemSnippet, "sys-reviewer");
+    ws.close();
   } finally {
     await app.close();
   }

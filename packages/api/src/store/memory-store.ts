@@ -1,6 +1,11 @@
 import { randomUUID } from "node:crypto";
 import type { Message, Thread } from "@mac/shared";
-import type { AppendMessageInput, CreateThreadInput, MacStore } from "./types.js";
+import type {
+  AppendMessageInput,
+  CreateThreadInput,
+  MacStore,
+  UpdateThreadMembersInput,
+} from "./types.js";
 
 export interface MemorySnapshot {
   threads: Thread[];
@@ -15,6 +20,19 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
+function normalizeMembers(
+  memberIds: string[] | undefined,
+  defaultCatId: string | null | undefined,
+): { memberIds: string[]; defaultCatId: string | null } {
+  const members = [...new Set((memberIds ?? []).map((id) => id.trim()).filter(Boolean))];
+  let def = defaultCatId ?? null;
+  if (def && !members.includes(def)) {
+    throw new Error(`defaultCatId "${def}" must be in memberIds`);
+  }
+  if (!def && members.length > 0) def = members[0] ?? null;
+  return { memberIds: members, defaultCatId: def };
+}
+
 export function createMemoryStore(seed?: MemorySnapshot): MemoryStore {
   const threads = new Map<string, Thread>();
   const messages = new Map<string, Message>();
@@ -22,8 +40,11 @@ export function createMemoryStore(seed?: MemorySnapshot): MemoryStore {
 
   if (seed) {
     for (const t of seed.threads) {
-      threads.set(t.id, structuredClone(t));
-      byThread.set(t.id, []);
+      const cloned = structuredClone(t);
+      cloned.memberIds = cloned.memberIds ?? [];
+      cloned.defaultCatId = cloned.defaultCatId ?? null;
+      threads.set(cloned.id, cloned);
+      byThread.set(cloned.id, []);
     }
     const sorted = [...seed.messages].sort((a, b) => a.seq - b.seq);
     for (const m of sorted) {
@@ -44,6 +65,7 @@ export function createMemoryStore(seed?: MemorySnapshot): MemoryStore {
 
     async createThread(input: CreateThreadInput): Promise<Thread> {
       const ts = nowIso();
+      const { memberIds, defaultCatId } = normalizeMembers(input.memberIds, input.defaultCatId);
       const thread: Thread = {
         id: randomUUID(),
         title: input.title?.trim() || "Untitled thread",
@@ -51,6 +73,8 @@ export function createMemoryStore(seed?: MemorySnapshot): MemoryStore {
         createdAt: ts,
         updatedAt: ts,
         lastSeq: 0,
+        memberIds,
+        defaultCatId,
       };
       threads.set(thread.id, thread);
       byThread.set(thread.id, []);
@@ -66,6 +90,16 @@ export function createMemoryStore(seed?: MemorySnapshot): MemoryStore {
       return [...threads.values()]
         .map((t) => structuredClone(t))
         .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    },
+
+    async updateThreadMembers(input: UpdateThreadMembersInput): Promise<Thread> {
+      const thread = threads.get(input.threadId);
+      if (!thread) throw new Error(`Thread not found: ${input.threadId}`);
+      const { memberIds, defaultCatId } = normalizeMembers(input.memberIds, input.defaultCatId);
+      thread.memberIds = memberIds;
+      thread.defaultCatId = defaultCatId;
+      thread.updatedAt = nowIso();
+      return structuredClone(thread);
     },
 
     async appendMessage(input: AppendMessageInput): Promise<Message> {

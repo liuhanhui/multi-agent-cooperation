@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { HealthResponse, Message, PlatformEvent, Thread } from "@mac/shared";
+import type { CatConfig, HealthResponse, Message, PlatformEvent, Thread } from "@mac/shared";
 
 function wsUrl(threadId: string, afterSeq: number): string {
   const proto = window.location.protocol === "https:" ? "wss" : "ws";
@@ -8,6 +8,7 @@ function wsUrl(threadId: string, afterSeq: number): string {
 
 export function App() {
   const [health, setHealth] = useState<HealthResponse | null>(null);
+  const [cats, setCats] = useState<CatConfig[]>([]);
   const [threads, setThreads] = useState<Thread[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -18,6 +19,8 @@ export function App() {
   const lastSeqRef = useRef(0);
   const messagesEnd = useRef<HTMLDivElement | null>(null);
 
+  const activeThread = threads.find((t) => t.id === activeId) ?? null;
+
   useEffect(() => {
     fetch("/health")
       .then(async (res) => {
@@ -27,6 +30,7 @@ export function App() {
       .then(setHealth)
       .catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)));
     void refreshThreads();
+    void refreshCats();
   }, []);
 
   useEffect(() => {
@@ -96,6 +100,31 @@ export function App() {
     setThreads(data.threads);
   }
 
+  async function refreshCats() {
+    const res = await fetch("/api/cats");
+    if (!res.ok) throw new Error(`list cats HTTP ${res.status}`);
+    const data = (await res.json()) as { cats: CatConfig[] };
+    setCats(data.cats);
+  }
+
+  async function setDefaultCat(catId: string) {
+    if (!activeId) return;
+    setError(null);
+    const thread = threads.find((t) => t.id === activeId);
+    const memberIds = thread?.memberIds?.length ? thread.memberIds : cats.map((c) => c.id);
+    const res = await fetch(`/api/threads/${activeId}/members`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ memberIds, defaultCatId: catId }),
+    });
+    if (!res.ok) {
+      setError(`set default cat HTTP ${res.status}`);
+      return;
+    }
+    const data = (await res.json()) as { thread: Thread };
+    setThreads((prev) => prev.map((t) => (t.id === data.thread.id ? data.thread : t)));
+  }
+
   async function createThread() {
     setError(null);
     const res = await fetch("/api/threads", {
@@ -140,7 +169,7 @@ export function App() {
       <header className="top">
         <p className="brand">Multi-Agent Cooperation</p>
         <p className="lede tight">
-          M04 — Send invokes Claude Code (or fake). Echo stream stays as a no-CLI demo.
+          M05 — pick a default cat, then Send invokes with that cat&apos;s system snippet.
         </p>
         <p className="meta">
           health:{" "}
@@ -185,6 +214,23 @@ export function App() {
             <p className="muted">Select or create a thread.</p>
           ) : (
             <>
+              <div className="row cat-row">
+                <label htmlFor="default-cat">Default cat</label>
+                <select
+                  id="default-cat"
+                  value={activeThread?.defaultCatId ?? ""}
+                  onChange={(e) => void setDefaultCat(e.target.value)}
+                >
+                  {(activeThread?.memberIds?.length
+                    ? cats.filter((c) => activeThread.memberIds.includes(c.id))
+                    : cats
+                  ).map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.displayName} ({c.role})
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div className="messages" aria-live="polite">
                 {messages.map((m) => (
                   <article key={m.id} className={`bubble ${m.role}`}>

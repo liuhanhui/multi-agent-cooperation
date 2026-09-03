@@ -4,6 +4,7 @@ dist
 .turbo
 coverage
 .env
+agent-config.json
 *.log
 .DS_Store
 data/
