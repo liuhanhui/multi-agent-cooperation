@@ -15,6 +15,7 @@ You are building a **multi-agent cooperation platform** (CLI-above layer). Follo
 - Ownership map: `docs/architecture/ownership/README.md`.
 - Prefer small milestones with demoable Done criteria.
 - No `any` in TypeScript. Keep packages focused.
+- **Comments (M07+):** every function/method/component must document purpose + inputs + outputs; key lines need why-comments. See `.cursor/rules/function-comments.mdc`.
 
 ## Commands
 
