@@ -1,5 +1,11 @@
-import { useEffect, useRef, useState } from "react";
-import type { CatConfig, HealthResponse, Message, PlatformEvent, Thread } from "@mac/shared";
+import { useEffect, useReducer, useRef, useState } from "react";
+import type { CatConfig, HealthResponse, PlatformEvent, Thread } from "@mac/shared";
+import { bubbleReducer } from "./chat/bubble-reducer";
+import { mentionSuggestion, parseLeadingMention } from "./chat/mention";
+import { ChatPanel } from "./components/ChatPanel";
+import { ThreadSidebar } from "./components/ThreadSidebar";
+
+const ACTIVE_THREAD_KEY = "mac.activeThreadId";
 
 function wsUrl(threadId: string, afterSeq: number): string {
   const proto = window.location.protocol === "https:" ? "wss" : "ws";
@@ -10,13 +16,14 @@ export function App() {
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [cats, setCats] = useState<CatConfig[]>([]);
   const [threads, setThreads] = useState<Thread[]>([]);
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(() =>
+    sessionStorage.getItem(ACTIVE_THREAD_KEY),
+  );
+  const [messages, dispatchBubbles] = useReducer(bubbleReducer, []);
   const [draft, setDraft] = useState("");
   const [title, setTitle] = useState("");
   const [wsState, setWsState] = useState<"idle" | "connecting" | "live" | "down">("idle");
   const [error, setError] = useState<string | null>(null);
-  const lastSeqRef = useRef(0);
   const messagesEnd = useRef<HTMLDivElement | null>(null);
 
   const activeThread = threads.find((t) => t.id === activeId) ?? null;
@@ -34,20 +41,24 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    if (activeId) sessionStorage.setItem(ACTIVE_THREAD_KEY, activeId);
+    else sessionStorage.removeItem(ACTIVE_THREAD_KEY);
+  }, [activeId]);
+
+  useEffect(() => {
     messagesEnd.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   useEffect(() => {
     if (!activeId) {
       setWsState("idle");
+      dispatchBubbles({ type: "reset" });
       return;
     }
     let closed = false;
     setWsState("connecting");
-    setMessages([]);
-    const afterSeq = 0;
-    lastSeqRef.current = 0;
-    const ws = new WebSocket(wsUrl(activeId, afterSeq));
+    dispatchBubbles({ type: "reset" });
+    const ws = new WebSocket(wsUrl(activeId, 0));
 
     ws.onopen = () => {
       if (!closed) setWsState("live");
@@ -59,32 +70,13 @@ export function App() {
       if (!closed) setWsState("down");
     };
     ws.onmessage = (ev) => {
-      // React StrictMode remounts effects; ignore events from the disposed socket.
       if (closed) return;
       const event = JSON.parse(String(ev.data)) as PlatformEvent | { type: string; error?: string };
       if (event.type === "error") {
         setError(event.error ?? "ws error");
         return;
       }
-      const pe = event as PlatformEvent;
-      if (pe.type === "thread.hydrated") {
-        setMessages(pe.messages);
-        lastSeqRef.current = pe.messages.at(-1)?.seq ?? 0;
-        return;
-      }
-      if (pe.type === "message.created") {
-        setMessages((prev) => upsertMessage(prev, pe.message));
-        lastSeqRef.current = Math.max(lastSeqRef.current, pe.message.seq);
-        return;
-      }
-      if (pe.type === "message.delta") {
-        setMessages((prev) => applyDelta(prev, pe.messageId, pe.threadId, pe.seq, pe.delta));
-        return;
-      }
-      if (pe.type === "message.completed" || pe.type === "message.failed") {
-        setMessages((prev) => upsertMessage(prev, pe.message));
-        lastSeqRef.current = Math.max(lastSeqRef.current, pe.message.seq);
-      }
+      dispatchBubbles({ type: "event", event: event as PlatformEvent });
     };
 
     return () => {
@@ -98,6 +90,10 @@ export function App() {
     if (!res.ok) throw new Error(`list threads HTTP ${res.status}`);
     const data = (await res.json()) as { threads: Thread[] };
     setThreads(data.threads);
+    const saved = sessionStorage.getItem(ACTIVE_THREAD_KEY);
+    if (saved && data.threads.some((t) => t.id === saved)) {
+      setActiveId(saved);
+    }
   }
 
   async function refreshCats() {
@@ -142,19 +138,45 @@ export function App() {
     setActiveId(data.thread.id);
   }
 
-  async function sendMessage(mode: "invoke" | "append" | "echo") {
+  function insertMention() {
+    const cat =
+      cats.find((c) => c.id === activeThread?.defaultCatId) ?? cats[0] ?? null;
+    const prefix = mentionSuggestion(cat);
+    if (!prefix) return;
+    setDraft((prev) => (prev.startsWith("@") ? prev : `${prefix}${prev}`));
+  }
+
+  async function sendMessage(mode: "invoke" | "echo") {
     if (!activeId || !draft.trim()) return;
     setError(null);
-    const path =
-      mode === "echo"
-        ? `/api/threads/${activeId}/messages/stream-echo`
-        : mode === "invoke"
-          ? `/api/threads/${activeId}/messages/invoke`
-          : `/api/threads/${activeId}/messages`;
-    const res = await fetch(path, {
+
+    if (mode === "echo") {
+      const res = await fetch(`/api/threads/${activeId}/messages/stream-echo`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ content: draft.trim() }),
+      });
+      if (!res.ok && res.status !== 202) {
+        setError(`send HTTP ${res.status}`);
+        return;
+      }
+      setDraft("");
+      await refreshThreads();
+      return;
+    }
+
+    const parsed = parseLeadingMention(draft, cats);
+    const catId = parsed.catId ?? activeThread?.defaultCatId ?? undefined;
+    const content = parsed.catId ? parsed.prompt : draft.trim();
+    if (!content) {
+      setError("Add a message after @cat (e.g. @architect design the API)");
+      return;
+    }
+
+    const res = await fetch(`/api/threads/${activeId}/messages/invoke`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ content: draft.trim() }),
+      body: JSON.stringify({ content, catId }),
     });
     if (!res.ok && res.status !== 202) {
       setError(`send HTTP ${res.status}`);
@@ -168,154 +190,51 @@ export function App() {
     <main className="shell app">
       <header className="top">
         <p className="brand">Multi-Agent Cooperation</p>
+        <h1 className="page-title">Chat</h1>
         <p className="lede tight">
-          M05 — pick a default cat, then Send invokes with that cat&apos;s system snippet.
+          Wave 1 demo — new thread, @default cat, stream, refresh keeps history (while API is up).
         </p>
         <p className="meta">
           health:{" "}
           {health
             ? `${health.status}/${health.store}${health.agent ? `/${health.agent}` : ""}`
             : "…"}{" "}
-          · ws: {wsState}
+          · cats: {cats.length}
         </p>
         {error ? <p className="err">{error}</p> : null}
       </header>
 
       <div className="layout">
-        <aside className="sidebar">
-          <div className="row">
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="New thread title"
-              aria-label="New thread title"
-            />
-            <button type="button" onClick={() => void createThread()}>
-              Create
-            </button>
-          </div>
-          <ul className="thread-list">
-            {threads.map((t) => (
-              <li key={t.id}>
-                <button
-                  type="button"
-                  className={t.id === activeId ? "active" : undefined}
-                  onClick={() => setActiveId(t.id)}
-                >
-                  {t.title}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </aside>
+        <ThreadSidebar
+          threads={threads}
+          cats={cats}
+          activeId={activeId}
+          title={title}
+          onTitleChange={setTitle}
+          onCreate={() => void createThread()}
+          onSelect={setActiveId}
+        />
 
-        <section className="chat">
-          {!activeId ? (
-            <p className="muted">Select or create a thread.</p>
-          ) : (
-            <>
-              <div className="row cat-row">
-                <label htmlFor="default-cat">Default cat</label>
-                <select
-                  id="default-cat"
-                  value={activeThread?.defaultCatId ?? ""}
-                  onChange={(e) => void setDefaultCat(e.target.value)}
-                >
-                  {(activeThread?.memberIds?.length
-                    ? cats.filter((c) => activeThread.memberIds.includes(c.id))
-                    : cats
-                  ).map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.displayName} ({c.role})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="messages" aria-live="polite">
-                {messages.map((m) => (
-                  <article key={m.id} className={`bubble ${m.role}`}>
-                    <header>
-                      <span>{m.authorId}</span>
-                      <span className="muted">
-                        #{m.seq} · {m.status}
-                      </span>
-                    </header>
-                    <p>
-                      {m.content ||
-                        (m.status === "streaming"
-                          ? "…"
-                          : m.status === "failed"
-                            ? (m.error ?? "failed")
-                            : "")}
-                    </p>
-                  </article>
-                ))}
-                <div ref={messagesEnd} />
-              </div>
-              <form
-                className="composer"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  void sendMessage("invoke");
-                }}
-              >
-                <input
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  placeholder="Message…"
-                  aria-label="Message"
-                />
-                <button type="submit">Send</button>
-                <button type="button" onClick={() => void sendMessage("echo")}>
-                  Echo stream
-                </button>
-              </form>
-            </>
-          )}
-        </section>
+        {!activeThread ? (
+          <section className="chat">
+            <p className="muted empty">Select or create a thread to start chatting.</p>
+          </section>
+        ) : (
+          <ChatPanel
+            thread={activeThread}
+            cats={cats}
+            messages={messages}
+            draft={draft}
+            wsState={wsState}
+            messagesEndRef={messagesEnd}
+            onDraftChange={setDraft}
+            onDefaultCatChange={(id) => void setDefaultCat(id)}
+            onInsertMention={insertMention}
+            onSend={() => void sendMessage("invoke")}
+            onEcho={() => void sendMessage("echo")}
+          />
+        )}
       </div>
     </main>
   );
-}
-
-function upsertMessage(prev: Message[], message: Message): Message[] {
-  const idx = prev.findIndex((m) => m.id === message.id);
-  if (idx === -1) return [...prev, message].sort((a, b) => a.seq - b.seq);
-  const next = [...prev];
-  next[idx] = message;
-  return next;
-}
-
-/** Apply a stream chunk; create a placeholder bubble if created event was missed. */
-function applyDelta(
-  prev: Message[],
-  messageId: string,
-  threadId: string,
-  seq: number,
-  delta: string,
-): Message[] {
-  const idx = prev.findIndex((m) => m.id === messageId);
-  if (idx === -1) {
-    const placeholder: Message = {
-      id: messageId,
-      threadId,
-      seq,
-      role: "assistant",
-      authorId: "echo",
-      content: delta,
-      status: "streaming",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    return [...prev, placeholder].sort((a, b) => a.seq - b.seq);
-  }
-  const current = prev[idx];
-  if (!current || current.status === "completed" || current.status === "failed") return prev;
-  const next = [...prev];
-  next[idx] = {
-    ...current,
-    content: current.content + delta,
-    status: "streaming",
-  };
-  return next;
 }

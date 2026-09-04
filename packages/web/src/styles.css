@@ -26,17 +26,23 @@ body {
 }
 
 .shell {
-  max-width: 64rem;
+  max-width: 72rem;
   margin: 0 auto;
-  padding: 2rem 1.25rem 2.5rem;
+  padding: 1.5rem 1.25rem 2rem;
 }
 
 .brand {
-  margin: 0 0 0.35rem;
-  font-size: 0.85rem;
+  margin: 0 0 0.2rem;
+  font-size: 0.8rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--accent);
+}
+
+.page-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.6rem;
+  font-weight: 600;
 }
 
 .lede {
@@ -57,14 +63,15 @@ body {
 
 .layout {
   display: grid;
-  grid-template-columns: 15rem 1fr;
+  grid-template-columns: 16rem 1fr;
   gap: 1rem;
-  min-height: 28rem;
+  min-height: 70vh;
 }
 
 @media (max-width: 720px) {
   .layout {
     grid-template-columns: 1fr;
+    min-height: auto;
   }
 }
 
@@ -73,16 +80,28 @@ body {
   border: 1px solid var(--line);
   background: var(--panel);
   padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 0;
+}
+
+.panel-title {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
 }
 
 .row {
   display: flex;
   gap: 0.4rem;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0;
+  align-items: center;
 }
 
 .row input,
-.composer input {
+.composer input,
+.cat-row select {
   flex: 1;
   min-width: 0;
   background: rgba(0, 0, 0, 0.25);
@@ -100,12 +119,20 @@ button {
   font-weight: 600;
 }
 
+button.ghost {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  font-weight: 500;
+}
+
 .thread-list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
   gap: 0.35rem;
+  overflow: auto;
 }
 
 .thread-list button {
@@ -115,6 +142,18 @@ button {
   color: var(--ink);
   border: 1px solid transparent;
   font-weight: 500;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.thread-title {
+  display: block;
+}
+
+.thread-meta {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 400;
 }
 
 .thread-list button.active,
@@ -123,18 +162,29 @@ button {
   background: rgba(61, 155, 143, 0.15);
 }
 
-.chat {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+.chat-toolbar {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.chat-hint {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.chat-hint code {
+  font-family: ui-monospace, "Cascadia Code", monospace;
+  font-size: 0.78rem;
 }
 
 .messages {
   flex: 1;
   overflow: auto;
-  max-height: 55vh;
   display: grid;
-  gap: 0.65rem;
+  gap: 0.75rem;
+  align-content: start;
+  min-height: 18rem;
+  max-height: calc(70vh - 9rem);
 }
 
 .bubble {
@@ -142,7 +192,25 @@ button {
   padding: 0.55rem 0.7rem;
 }
 
-.bubble header {
+.bubble-row {
+  display: grid;
+  grid-template-columns: 2rem 1fr;
+  gap: 0.65rem;
+  align-items: start;
+}
+
+.avatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.35rem;
+  display: grid;
+  place-items: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #04120f;
+}
+
+.bubble-body header {
   display: flex;
   justify-content: space-between;
   gap: 0.5rem;
@@ -151,10 +219,31 @@ button {
   color: var(--muted);
 }
 
+.author {
+  color: var(--ink);
+  font-weight: 600;
+}
+
 .bubble p {
   margin: 0;
   white-space: pre-wrap;
-  line-height: 1.4;
+  line-height: 1.45;
+}
+
+.stream-caret {
+  display: inline-block;
+  width: 0.4rem;
+  height: 1em;
+  margin-left: 0.15rem;
+  vertical-align: text-bottom;
+  background: var(--accent);
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
 }
 
 .bubble.user {
@@ -170,27 +259,18 @@ button {
   gap: 0.4rem;
 }
 
-.cat-row {
-  align-items: center;
-  margin-bottom: 0;
-}
-
 .cat-row label {
   color: var(--muted);
   font-size: 0.85rem;
   white-space: nowrap;
 }
 
-.cat-row select {
-  flex: 1;
-  background: rgba(0, 0, 0, 0.25);
-  border: 1px solid var(--line);
-  color: var(--ink);
-  padding: 0.45rem 0.55rem;
-}
-
 .muted {
   color: var(--muted);
+}
+
+.empty {
+  margin: 1rem 0;
 }
 
 .err {

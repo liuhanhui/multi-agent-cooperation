@@ -1,0 +1,43 @@
+---
+description: Function-level and key-line comments required for all new/changed code
+alwaysApply: true
+---
+
+# Code Comments (required from M07 onward)
+
+When writing or changing application code (TypeScript/TSX and tests), comments are mandatory. Do not skip for “obvious” code.
+
+## Function / method level
+
+Every exported or non-trivial local function, method, React component, reducer, and hook must have a short comment (JSDoc or block) that states:
+
+1. **What it does** (one sentence)
+2. **Inputs** — each meaningful param / prop / event payload and what it means
+3. **Outputs** — return value, side effects (state updates, fetch, WS), or thrown errors when relevant
+
+```typescript
+/**
+ * Parse a leading @mention from the composer draft.
+ * @param text - Raw composer input (may start with @token)
+ * @param cats - Known cats used to resolve token → catId
+ * @returns catId when resolved; prompt is the remainder after the mention
+ */
+export function parseLeadingMention(text: string, cats: Cat[]): ParsedMention { ... }
+```
+
+## Key lines
+
+Comment non-obvious control flow, protocol/API contracts, invariants, and “why this exists”:
+
+- Branch that encodes product policy (e.g. fallback to defaultCatId)
+- Persistence keys, event type strings, WS message shapes
+- Ordering / race / StrictMode guards
+- Mapping between domain IDs and UI labels
+
+Do **not** narrate trivial syntax (`// increment i`). Prefer **why** over **what** on key lines.
+
+## Scope
+
+- Applies to **new code and edits** in later milestones (M07+). Prefer adding comments when touching older functions.
+- Pure one-liners that only forward (e.g. `export { x } from "./x"`) may omit.
+- Never leave undocumented public APIs in `packages/*/src`.
