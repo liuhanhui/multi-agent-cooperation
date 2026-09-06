@@ -12,8 +12,8 @@ Why: one sentence
 
 | Cell | Status | Summary | First milestone |
 |------|--------|---------|-----------------|
-| `scaffold` | active | Monorepo, health, env, start scripts | M02 |
-| `transport` | active | Local WS ingress + thread subscribe/hydrate | M03 |
+| `scaffold` | active | Monorepo, health, env, start scripts; thin create-app / App shells | M02 / structure |
+| `transport` | active | Local WS ingress + thread subscribe/hydrate; web `api/` + `useThreadSocket` | M03 |
 | `bubble-pipeline` | active | Bubble reducer single-writer + streaming merge | M06 |
 | `identity-session` | active | Cat registry + thread members/defaultCat | M05 |
 | `cli-integration` | active | Claude Code spawn/stdio → platform events | M04 |
@@ -30,3 +30,5 @@ Why: one sentence
 | `plugin` | planned | Extensibility host | M23 |
 
 Ordinary increments: `Map delta: none`. New boundaries require updating this table before merge.
+
+Directory ↔ cell map: [`../code-map.md`](../code-map.md).
