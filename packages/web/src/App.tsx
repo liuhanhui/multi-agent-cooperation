@@ -1,7 +1,7 @@
 import { useEffect, useReducer, useRef, useState } from "react";
 import type { CatConfig, HealthResponse, PlatformEvent, Thread } from "@mac/shared";
 import { bubbleReducer } from "./chat/bubble-reducer";
-import { mentionSuggestion, parseLeadingMention } from "./chat/mention";
+import { mentionSuggestion, parseMentions } from "./chat/mention";
 import { ChatPanel } from "./components/ChatPanel";
 import { ThreadSidebar } from "./components/ThreadSidebar";
 
@@ -138,6 +138,11 @@ export function App() {
     setActiveId(data.thread.id);
   }
 
+  /**
+   * Insert `@defaultCat ` at the start of the composer when it does not already
+   * begin with a mention. Used by the ChatPanel "@" button.
+   * @returns void (updates draft state)
+   */
   function insertMention() {
     const cat =
       cats.find((c) => c.id === activeThread?.defaultCatId) ?? cats[0] ?? null;
@@ -146,6 +151,11 @@ export function App() {
     setDraft((prev) => (prev.startsWith("@") ? prev : `${prefix}${prev}`));
   }
 
+  /**
+   * Send the composer draft: echo streams locally, invoke uses server @mention routing.
+   * @param mode - `invoke` runs agent(s); `echo` is the stream demo without an agent
+   * @returns Promise that settles after HTTP + thread list refresh
+   */
   async function sendMessage(mode: "invoke" | "echo") {
     if (!activeId || !draft.trim()) return;
     setError(null);
@@ -165,21 +175,26 @@ export function App() {
       return;
     }
 
-    const parsed = parseLeadingMention(draft, cats);
-    const catId = parsed.catId ?? activeThread?.defaultCatId ?? undefined;
-    const content = parsed.catId ? parsed.prompt : draft.trim();
-    if (!content) {
-      setError("Add a message after @cat (e.g. @architect design the API)");
+    // Client-side preview only; server re-parses and is the routing authority.
+    const preview = parseMentions(draft, cats);
+    if (preview.unresolved.length > 0) {
+      setError(`Unknown mention: @${preview.unresolved[0]}`);
+      return;
+    }
+    if (preview.targets.length > 0 && !preview.prompt.trim()) {
+      setError("Add a message after @cat (e.g. @architect @reviewer design the API)");
       return;
     }
 
+    // Send raw draft so the API can resolve multi-target @A @B itself.
     const res = await fetch(`/api/threads/${activeId}/messages/invoke`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ content, catId }),
+      body: JSON.stringify({ content: draft.trim() }),
     });
     if (!res.ok && res.status !== 202) {
-      setError(`send HTTP ${res.status}`);
+      const body = (await res.json().catch(() => null)) as { error?: string } | null;
+      setError(body?.error ?? `send HTTP ${res.status}`);
       return;
     }
     setDraft("");
@@ -192,7 +207,7 @@ export function App() {
         <p className="brand">Multi-Agent Cooperation</p>
         <h1 className="page-title">Chat</h1>
         <p className="lede tight">
-          Wave 1 demo — new thread, @default cat, stream, refresh keeps history (while API is up).
+          Wave 2 — @A only A; @A @B serial; no mention uses default cat.
         </p>
         <p className="meta">
           health:{" "}

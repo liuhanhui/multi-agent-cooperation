@@ -367,6 +367,7 @@ Ownership 总图：`docs/architecture/ownership/README.md`
 
 ## Changelog
 
+- 2026-09-04：M07 — shared `parseMentions`、API `resolveMentionRoute`、串行多目标 invoke；文档 `at-mention-routing-system.md`。
 - 2026-09-03：M06 — Chat UI（侧栏/气泡/头像）、bubble reducer、@默认猫 mention、刷新恢复 active thread。
 - 2026-09-02：M05 — Cat 注册表只读加载、线程 member/defaultCat、invoke 绑定 systemSnippet。
 - 2026-09-01：M04 — AgentProvider + Claude Code adapter；`POST .../messages/invoke`；fake provider 测试；失败气泡。

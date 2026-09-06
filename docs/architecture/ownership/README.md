@@ -18,9 +18,9 @@ Why: one sentence
 | `identity-session` | active | Cat registry + thread members/defaultCat | M05 |
 | `cli-integration` | active | Claude Code spawn/stdio → platform events | M04 |
 | `thread-navigation` | active (thin) | Sidebar thread list + session restore | M06 |
+| `routing-context` | active (thin) | @mention parse + serial multi-target route | M07 |
 | `dispatch` | planned | Invocation queue, cancel, busy gate | M08 |
 | `callback-auth` | planned | Invocation credentials for callbacks | M10 |
-| `routing-context` | planned | @mention + live routing projection | M07 |
 | `hub-action-surface` | planned | Rich blocks, Hub actions, skills UI | M12 / M14 |
 | `mcp-surface-governance` | planned | MCP tool identity and exposure | M13 |
 | `portable-governance` | planned | Light SOP / Mission Hub | M15 |
