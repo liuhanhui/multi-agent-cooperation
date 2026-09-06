@@ -1,3 +1,4 @@
+import type { Handoff } from "./handoff.js";
 import type { Message } from "./message.js";
 import type { Thread } from "./thread.js";
 
@@ -18,4 +19,6 @@ export type PlatformEvent =
       delta: string;
     }
   | { type: "message.completed"; message: Message }
-  | { type: "message.failed"; message: Message; error: string };
+  | { type: "message.failed"; message: Message; error: string }
+  | { type: "handoff.delivered"; handoff: Handoff }
+  | { type: "handoff.acked"; handoff: Handoff };

@@ -1,6 +1,7 @@
 import type { AgentProvider } from "../agents/types.js";
 import type { CatRegistry } from "../cats/load-cat-config.js";
 import type { InvocationDispatcher } from "../dispatch/dispatcher.js";
+import type { HandoffService } from "../handoff/handoff-service.js";
 import type { MacStore } from "../store/types.js";
 import type { ThreadHub } from "../ws/thread-hub.js";
 
@@ -17,4 +18,6 @@ export interface AppDeps {
   cats?: CatRegistry;
   /** Present when an agent is configured (M08 dispatch). */
   dispatcher?: InvocationDispatcher;
+  /** Present when dispatcher exists (M09 A2A handoff). */
+  handoffs?: HandoffService;
 }

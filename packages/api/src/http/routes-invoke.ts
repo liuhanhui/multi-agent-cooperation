@@ -25,6 +25,8 @@ export function registerInvokeRoutes(app: FastifyInstance, deps: AppDeps): void 
       catId?: string;
       strategy?: MentionRoutingStrategy;
       priority?: number;
+      /** After this invoke completes, auto handoff + review invoke for this cat (M09). */
+      autoReviewTo?: string;
     };
   }>("/api/threads/:id/messages/invoke", async (req, reply) => {
     if (!agent) return reply.code(503).send({ error: "No agent provider configured" });
@@ -46,12 +48,23 @@ export function registerInvokeRoutes(app: FastifyInstance, deps: AppDeps): void 
       return reply.code(400).send({ error: route.error });
     }
 
+    const autoReviewTo = req.body?.autoReviewTo?.trim();
+    if (autoReviewTo) {
+      if (cats && !cats.get(autoReviewTo)) {
+        return reply.code(400).send({ error: `Unknown autoReviewTo cat: ${autoReviewTo}` });
+      }
+      if (thread.memberIds.length > 0 && !thread.memberIds.includes(autoReviewTo)) {
+        return reply.code(400).send({ error: `autoReviewTo ${autoReviewTo} is not a thread member` });
+      }
+    }
+
     const { entry, started } = dispatcher.enqueue({
       threadId: thread.id,
       prompt: route.prompt,
       catIds: route.catIds,
       authorId: req.body?.authorId ?? "operator",
       priority: req.body?.priority,
+      autoReview: autoReviewTo ? { toCatId: autoReviewTo } : undefined,
       systemSnippetFor: (catId) =>
         (route.catIds.length === 1 ? req.body?.systemSnippet : undefined) ??
         cats?.get(catId)?.systemSnippet,
@@ -64,6 +77,7 @@ export function registerInvokeRoutes(app: FastifyInstance, deps: AppDeps): void 
       catIds: entry.catIds,
       catId: entry.catIds[0],
       strategy: route.strategy,
+      autoReviewTo: autoReviewTo ?? null,
       entry,
     });
   });
