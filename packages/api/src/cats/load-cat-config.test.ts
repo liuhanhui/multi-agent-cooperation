@@ -64,7 +64,9 @@ test("createCatRegistry rejects duplicates and empty", () => {
 
 test("loadCatRegistry reads file read-only and falls back when missing", () => {
   const missing = loadCatRegistry(join(tmpdir(), `mac-missing-${Date.now()}.json`));
-  assert.ok(missing.list().length >= 2);
+  assert.ok(missing.list().length >= 3);
+  assert.equal(missing.get("builder")?.provider, "antigravity");
+  assert.equal(missing.get("reviewer")?.provider, "codex");
 
   const dir = mkdtempSync(join(tmpdir(), "mac-cats-"));
   const file = join(dir, "agent-config.json");

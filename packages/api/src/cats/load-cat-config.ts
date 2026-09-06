@@ -111,6 +111,7 @@ export function createCatRegistry(cats: CatConfig[]): CatRegistry {
 export function loadCatRegistry(filePath?: string): CatRegistry {
   const path = resolve(filePath ?? process.env.MAC_AGENT_CONFIG ?? "agent-config.json");
   if (!existsSync(path)) {
+    // Built-in demo trio spans three CLI families (M11 Done: same-thread multi-family).
     return createCatRegistry([
       {
         id: "architect",
@@ -123,8 +124,15 @@ export function loadCatRegistry(filePath?: string): CatRegistry {
         id: "reviewer",
         displayName: "Reviewer",
         role: "review",
-        provider: "claude-code",
+        provider: "codex",
         systemSnippet: "You are the review lead. Prefer defect-first feedback and concrete fixes.",
+      },
+      {
+        id: "builder",
+        displayName: "Builder",
+        role: "implementation",
+        provider: "antigravity",
+        systemSnippet: "You are the implementation lead. Prefer minimal working changes and clear next steps.",
       },
     ]);
   }

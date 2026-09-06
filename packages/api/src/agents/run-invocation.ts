@@ -130,6 +130,8 @@ async function streamExistingAssistant(params: {
     for await (const event of agent.invoke({
       prompt,
       threadId,
+      // Router keys off author cat so each family CLI can differ per bubble.
+      catId: assistantMessage.authorId,
       systemSnippet,
       cwd,
       timeoutMs,
