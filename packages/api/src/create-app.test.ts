@@ -526,3 +526,124 @@ test("unknown @mention returns 400", async () => {
     await app.close();
   }
 });
+
+test("busy thread queues second invoke then drains FIFO", async () => {
+  const agent = createFakeAgentProvider({ chunks: ["ok"], delayMs: 50 });
+  const { app } = await listen(agent);
+  try {
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/threads",
+      payload: { title: "queue" },
+    });
+    const threadId = (created.json() as { thread: Thread }).thread.id;
+
+    const first = await app.inject({
+      method: "POST",
+      url: `/api/threads/${threadId}/messages/invoke`,
+      payload: { content: "first" },
+    });
+    assert.equal(first.statusCode, 202);
+    const firstBody = first.json() as { queueEntryId: string; started: boolean; status: string };
+    assert.equal(firstBody.started, true);
+    assert.equal(firstBody.status, "running");
+
+    const second = await app.inject({
+      method: "POST",
+      url: `/api/threads/${threadId}/messages/invoke`,
+      payload: { content: "second" },
+    });
+    assert.equal(second.statusCode, 202);
+    const secondBody = second.json() as { queueEntryId: string; started: boolean; status: string };
+    assert.equal(secondBody.started, false);
+    assert.equal(secondBody.status, "queued");
+
+    // Poll until both invocations complete.
+    const deadline = Date.now() + 5000;
+    let statuses: string[] = [];
+    while (Date.now() < deadline) {
+      const listed = await app.inject({
+        method: "GET",
+        url: `/api/threads/${threadId}/invocations`,
+      });
+      const entries = (listed.json() as { entries: { id: string; status: string; prompt: string }[] })
+        .entries;
+      const a = entries.find((e) => e.id === firstBody.queueEntryId);
+      const b = entries.find((e) => e.id === secondBody.queueEntryId);
+      statuses = [a?.status ?? "", b?.status ?? ""];
+      if (statuses[0] === "completed" && statuses[1] === "completed") break;
+      await new Promise((r) => setTimeout(r, 30));
+    }
+    assert.deepEqual(statuses, ["completed", "completed"]);
+  } finally {
+    await app.close();
+  }
+});
+
+test("cancel running invocation stops the agent turn", async () => {
+  const agent: AgentProvider = {
+    id: "slow",
+    async *invoke(input: AgentInvokeInput): AsyncIterable<AgentStreamEvent> {
+      yield { type: "delta", text: "x" };
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(resolve, 5000);
+        input.signal?.addEventListener("abort", () => {
+          clearTimeout(timer);
+          reject(new Error("aborted"));
+        });
+      });
+      yield { type: "completed", text: "x" };
+    },
+  };
+  const { app } = await listen(agent);
+  try {
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/threads",
+      payload: { title: "cancel-http" },
+    });
+    const threadId = (created.json() as { thread: Thread }).thread.id;
+
+    const invoked = await app.inject({
+      method: "POST",
+      url: `/api/threads/${threadId}/messages/invoke`,
+      payload: { content: "long job" },
+    });
+    assert.equal(invoked.statusCode, 202);
+    const queueEntryId = (invoked.json() as { queueEntryId: string }).queueEntryId;
+
+    // Wait until a turn row exists (agent has started).
+    const deadlineStart = Date.now() + 3000;
+    while (Date.now() < deadlineStart) {
+      const got = await app.inject({
+        method: "GET",
+        url: `/api/threads/${threadId}/invocations/${queueEntryId}`,
+      });
+      const turns = (got.json() as { turns: { messageId: string | null }[] }).turns;
+      if (turns.some((t) => t.messageId)) break;
+      await new Promise((r) => setTimeout(r, 20));
+    }
+
+    const cancelled = await app.inject({
+      method: "POST",
+      url: `/api/threads/${threadId}/invocations/${queueEntryId}/cancel`,
+      payload: { reason: "stop" },
+    });
+    assert.equal(cancelled.statusCode, 200);
+
+    const deadline = Date.now() + 5000;
+    let status = "running";
+    while (Date.now() < deadline) {
+      const got = await app.inject({
+        method: "GET",
+        url: `/api/threads/${threadId}/invocations/${queueEntryId}`,
+      });
+      status = (got.json() as { entry: { status: string } }).entry.status;
+      if (status === "cancelled") break;
+      await new Promise((r) => setTimeout(r, 30));
+    }
+    assert.equal(status, "cancelled");
+  } finally {
+    await app.close();
+  }
+});
