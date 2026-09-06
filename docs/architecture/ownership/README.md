@@ -20,7 +20,7 @@ Why: one sentence
 | `thread-navigation` | active (thin) | Sidebar thread list + session restore | M06 |
 | `routing-context` | active (thin) | @mention parse + serial multi-target route | M07 |
 | `dispatch` | active | InvocationQueue, busy gate, cancel, orphan reconcile; A2A handoff trigger | M08 / M09 |
-| `callback-auth` | planned | Invocation credentials for callbacks | M10 |
+| `callback-auth` | active | Short-lived invocation tokens + callback 401/expiry telemetry | M10 |
 | `hub-action-surface` | planned | Rich blocks, Hub actions, skills UI | M12 / M14 |
 | `mcp-surface-governance` | planned | MCP tool identity and exposure | M13 |
 | `portable-governance` | planned | Light SOP / Mission Hub | M15 |

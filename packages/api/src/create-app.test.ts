@@ -647,3 +647,88 @@ test("cancel running invocation stops the agent turn", async () => {
     await app.close();
   }
 });
+
+test("callback without bearer returns 401 and records telemetry", async () => {
+  const { app } = await listen();
+  try {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/callbacks/invocation",
+      payload: { content: "hi" },
+    });
+    assert.equal(res.statusCode, 401);
+    const body = res.json() as { code: string };
+    assert.equal(body.code, "callback_auth_missing");
+
+    const telemetry = await app.inject({ method: "GET", url: "/api/callbacks/auth-failures" });
+    assert.equal(telemetry.statusCode, 200);
+    const failures = (telemetry.json() as { failures: { reason: string }[] }).failures;
+    assert.ok(failures.some((f) => f.reason === "missing"));
+  } finally {
+    await app.close();
+  }
+});
+
+test("callback with invalid token returns 401", async () => {
+  const { app } = await listen();
+  try {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/callbacks/invocation",
+      headers: { authorization: "Bearer not-a-real-token" },
+      payload: { content: "hi" },
+    });
+    assert.equal(res.statusCode, 401);
+    assert.equal((res.json() as { code: string }).code, "callback_auth_invalid");
+  } finally {
+    await app.close();
+  }
+});
+
+test("valid callback token writes assistant message into the bound thread", async () => {
+  const agent = createFakeAgentProvider({ chunks: ["ok"], delayMs: 80 });
+  const { app } = await listen(agent);
+  try {
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/threads",
+      payload: { title: "callback-write" },
+    });
+    const threadId = (created.json() as { thread: Thread }).thread.id;
+
+    const invoked = await app.inject({
+      method: "POST",
+      url: `/api/threads/${threadId}/messages/invoke`,
+      payload: { content: "@architect keep going" },
+    });
+    assert.equal(invoked.statusCode, 202);
+    const { callbackToken, queueEntryId } = invoked.json() as {
+      callbackToken?: string;
+      queueEntryId: string;
+    };
+    assert.ok(callbackToken);
+
+    const cb = await app.inject({
+      method: "POST",
+      url: "/api/callbacks/invocation",
+      headers: { authorization: `Bearer ${callbackToken}` },
+      payload: { content: "note from agent callback", authorId: "architect" },
+    });
+    assert.equal(cb.statusCode, 201);
+    const message = (cb.json() as { message: { threadId: string; content: string; authorId: string } })
+      .message;
+    assert.equal(message.threadId, threadId);
+    assert.equal(message.authorId, "architect");
+    assert.equal(message.content, "note from agent callback");
+    assert.equal((cb.json() as { queueEntryId: string }).queueEntryId, queueEntryId);
+
+    const history = await app.inject({
+      method: "GET",
+      url: `/api/threads/${threadId}/messages`,
+    });
+    const messages = (history.json() as { messages: { content: string }[] }).messages;
+    assert.ok(messages.some((m) => m.content === "note from agent callback"));
+  } finally {
+    await app.close();
+  }
+});

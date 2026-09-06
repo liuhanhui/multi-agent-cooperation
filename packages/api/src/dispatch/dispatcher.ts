@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
-import type { QueueEntry, TurnExecution } from "@mac/shared";
+import type { InvocationCredential, QueueEntry, TurnExecution } from "@mac/shared";
 import type { AgentProvider } from "../agents/types.js";
 import { runRoutedInvocation } from "../agents/run-invocation.js";
+import type { InvocationCredentialStore } from "../callback-auth/credential-store.js";
 import type { MacStore } from "../store/types.js";
 import type { ThreadHub } from "../ws/thread-hub.js";
 import { TurnExecutionStore } from "./turn-execution-store.js";
@@ -31,6 +32,10 @@ export interface DispatcherDeps {
   hub: ThreadHub;
   agent: AgentProvider;
   executions: TurnExecutionStore;
+  /** M10: mint short-lived callback tokens when a job starts. */
+  credentials?: InvocationCredentialStore;
+  /** Public API origin for callbackUrl (e.g. http://127.0.0.1:4010). */
+  publicBaseUrl?: string;
   /** Optional M09 handoff service for auto-review after completion. */
   handoffs?: {
     createAutoReview: (params: {
@@ -59,6 +64,8 @@ export class InvocationDispatcher {
     (catId: string) => string | undefined
   >();
   private readonly autoReviews = new Map<string, { toCatId: string }>();
+  /** One-shot callback credentials minted when an entry starts. */
+  private readonly entryCredentials = new Map<string, InvocationCredential>();
   /** Entry ids currently executing (background). */
   private readonly inFlight = new Set<string>();
 
@@ -168,6 +175,15 @@ export class InvocationDispatcher {
   }
 
   /**
+   * Return the live callback credential for a running entry (token included once for agents/tests).
+   * @param queueEntryId - Entry id
+   * @returns Credential or undefined
+   */
+  getCallbackCredential(queueEntryId: string): InvocationCredential | undefined {
+    return this.entryCredentials.get(queueEntryId);
+  }
+
+  /**
    * After a job finishes, start any newly-runnable queued entries.
    */
   private async pump(): Promise<void> {
@@ -221,6 +237,15 @@ export class InvocationDispatcher {
       updatedAt: new Date().toISOString(),
     });
 
+    if (this.deps.credentials) {
+      const credential = this.deps.credentials.mint({
+        queueEntryId: entryId,
+        threadId: entry.threadId,
+        catIds: entry.catIds,
+      });
+      this.entryCredentials.set(entryId, credential);
+    }
+
     void this.execute(entryId, controller);
     return true;
   }
@@ -240,6 +265,8 @@ export class InvocationDispatcher {
 
     const systemSnippetFor =
       this.snippetResolvers.get(entryId) ?? ((_catId: string) => undefined);
+    const credential = this.entryCredentials.get(entryId);
+    const base = this.deps.publicBaseUrl?.replace(/\/$/, "") ?? "";
 
     try {
       await runRoutedInvocation({
@@ -253,6 +280,9 @@ export class InvocationDispatcher {
         systemSnippetFor,
         signal: controller.signal,
         awaitCompletion: true,
+        callbackUrl: credential && base ? `${base}/api/callbacks/invocation` : undefined,
+        callbackToken: credential?.token,
+        callbackExpiresAt: credential?.expiresAt,
         onTurn: (event) => this.handleTurnEvent(entryId, entry.threadId, event),
       });
 
@@ -278,6 +308,7 @@ export class InvocationDispatcher {
       this.liveCancels.delete(entryId);
       this.snippetResolvers.delete(entryId);
       this.autoReviews.delete(entryId);
+      this.entryCredentials.delete(entryId);
       this.inFlight.delete(entryId);
       void this.pump();
     }

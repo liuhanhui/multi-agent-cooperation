@@ -50,6 +50,10 @@ export interface RunRoutedInvocationParams {
   timeoutMs?: number;
   /** AbortSignal from dispatcher CancelToken / AbortController. */
   signal?: AbortSignal;
+  /** M10 callback credentials forwarded into AgentInvokeInput. */
+  callbackUrl?: string;
+  callbackToken?: string;
+  callbackExpiresAt?: string;
   /**
    * When true, await the full serial chain before returning (dispatcher).
    * When false (HTTP legacy), return after first assistant bubble is created.
@@ -82,6 +86,9 @@ async function streamExistingAssistant(params: {
   cwd?: string;
   timeoutMs?: number;
   signal?: AbortSignal;
+  callbackUrl?: string;
+  callbackToken?: string;
+  callbackExpiresAt?: string;
 }): Promise<Message> {
   const {
     store,
@@ -94,6 +101,9 @@ async function streamExistingAssistant(params: {
     cwd,
     timeoutMs,
     signal,
+    callbackUrl,
+    callbackToken,
+    callbackExpiresAt,
   } = params;
 
   const failCancelled = async (): Promise<Message> => {
@@ -124,6 +134,9 @@ async function streamExistingAssistant(params: {
       cwd,
       timeoutMs,
       signal,
+      callbackUrl,
+      callbackToken,
+      callbackExpiresAt,
     })) {
       if (signal?.aborted) {
         return failCancelled();
@@ -202,6 +215,9 @@ async function runAssistantTurn(params: {
   cwd?: string;
   timeoutMs?: number;
   signal?: AbortSignal;
+  callbackUrl?: string;
+  callbackToken?: string;
+  callbackExpiresAt?: string;
   attempt: number;
   onTurn?: (event: TurnHookEvent) => void;
 }): Promise<Message> {
@@ -244,6 +260,9 @@ async function runAssistantTurn(params: {
     cwd: params.cwd,
     timeoutMs: params.timeoutMs,
     signal: params.signal,
+    callbackUrl: params.callbackUrl,
+    callbackToken: params.callbackToken,
+    callbackExpiresAt: params.callbackExpiresAt,
   });
 
   const status: TurnExecutionStatus =
@@ -286,6 +305,9 @@ export async function runRoutedInvocation(
     cwd,
     timeoutMs,
     signal,
+    callbackUrl,
+    callbackToken,
+    callbackExpiresAt,
     awaitCompletion = false,
     onTurn,
   } = params;
@@ -322,6 +344,9 @@ export async function runRoutedInvocation(
         cwd,
         timeoutMs,
         signal,
+        callbackUrl,
+        callbackToken,
+        callbackExpiresAt,
         attempt,
         onTurn,
       });
@@ -383,6 +408,9 @@ export async function runRoutedInvocation(
       cwd,
       timeoutMs,
       signal,
+      callbackUrl,
+      callbackToken,
+      callbackExpiresAt,
     });
     const status: TurnExecutionStatus =
       terminal.status === "completed"
@@ -416,6 +444,9 @@ export async function runRoutedInvocation(
         cwd,
         timeoutMs,
         signal,
+        callbackUrl,
+        callbackToken,
+        callbackExpiresAt,
         attempt,
         onTurn,
       });

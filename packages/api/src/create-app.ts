@@ -1,6 +1,7 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import websocket from "@fastify/websocket";
 import type { AgentProvider } from "./agents/types.js";
+import { InvocationCredentialStore } from "./callback-auth/credential-store.js";
 import type { CatRegistry } from "./cats/load-cat-config.js";
 import { InvocationDispatcher } from "./dispatch/dispatcher.js";
 import { reconcileOrphanMessages } from "./dispatch/reconcile.js";
@@ -8,6 +9,7 @@ import { TurnExecutionStore } from "./dispatch/turn-execution-store.js";
 import { HandoffService } from "./handoff/handoff-service.js";
 import { HandoffStore } from "./handoff/handoff-store.js";
 import type { AppDeps } from "./http/deps.js";
+import { registerCallbackRoutes } from "./http/routes-callbacks.js";
 import { registerCatRoutes } from "./http/routes-cats.js";
 import { registerHandoffRoutes } from "./http/routes-handoffs.js";
 import { registerInvokeRoutes } from "./http/routes-invoke.js";
@@ -25,6 +27,8 @@ export interface AppOptions {
   cats?: CatRegistry;
   /** Skip orphan reconcile (unit tests that seed pending messages intentionally). */
   skipReconcile?: boolean;
+  /** Public base URL for agent callbackUrl (default http://127.0.0.1:$MAC_API_PORT). */
+  publicBaseUrl?: string;
 }
 
 /**
@@ -37,6 +41,11 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   const hub = new ThreadHub();
   const executions = new TurnExecutionStore();
   const handoffStore = new HandoffStore();
+  const credentials = new InvocationCredentialStore();
+  const publicBaseUrl =
+    opts.publicBaseUrl ??
+    process.env.MAC_PUBLIC_BASE_URL ??
+    `http://127.0.0.1:${process.env.MAC_API_PORT ?? "4010"}`;
 
   const dispatcher = opts.agent
     ? new InvocationDispatcher({
@@ -44,6 +53,8 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
         hub,
         agent: opts.agent,
         executions,
+        credentials,
+        publicBaseUrl,
       })
     : undefined;
 
@@ -70,6 +81,8 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     cats: opts.cats,
     dispatcher,
     handoffs,
+    credentials,
+    publicBaseUrl,
   };
 
   // Restart safety: pending/streaming bubbles → failed(orphan-recovered).
@@ -84,6 +97,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   registerThreadRoutes(app, deps);
   registerInvokeRoutes(app, deps);
   registerHandoffRoutes(app, deps);
+  registerCallbackRoutes(app, deps);
   registerWsRoutes(app, deps);
 
   return app;

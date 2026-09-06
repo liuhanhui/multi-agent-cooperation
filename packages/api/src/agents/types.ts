@@ -12,6 +12,12 @@ export interface AgentInvokeInput {
   cwd?: string;
   timeoutMs?: number;
   signal?: AbortSignal;
+  /** Absolute or path URL the agent may POST progress/results to (M10). */
+  callbackUrl?: string;
+  /** Short-lived bearer token for callbackUrl (M10). */
+  callbackToken?: string;
+  /** ISO expiry for callbackToken. */
+  callbackExpiresAt?: string;
 }
 
 export interface AgentProvider {

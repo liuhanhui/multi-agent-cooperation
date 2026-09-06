@@ -6,7 +6,7 @@ Platform layer **above** Agent CLIs so multiple model families work as one team.
 
 ## Status
 
-**Wave 2 / M09** — A2A structured handoff + auto/explicit review (`feat/m09-a2a-handoff`).
+**Wave 2 / M10** — callback auth with short-lived invocation tokens (`feat/m10-callback-auth`).
 
 Roadmap: [`build-plan.md`](./build-plan.md) · Vision: [`docs/VISION.md`](./docs/VISION.md) · Decisions: [`docs/DECISIONS.md`](./docs/DECISIONS.md)
 

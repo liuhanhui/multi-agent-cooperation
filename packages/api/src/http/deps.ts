@@ -1,4 +1,5 @@
 import type { AgentProvider } from "../agents/types.js";
+import type { InvocationCredentialStore } from "../callback-auth/credential-store.js";
 import type { CatRegistry } from "../cats/load-cat-config.js";
 import type { InvocationDispatcher } from "../dispatch/dispatcher.js";
 import type { HandoffService } from "../handoff/handoff-service.js";
@@ -20,4 +21,8 @@ export interface AppDeps {
   dispatcher?: InvocationDispatcher;
   /** Present when dispatcher exists (M09 A2A handoff). */
   handoffs?: HandoffService;
+  /** M10 short-lived invocation callback tokens + auth telemetry. */
+  credentials?: InvocationCredentialStore;
+  /** Public base URL used when minting callbackUrl for agents. */
+  publicBaseUrl?: string;
 }
