@@ -1,22 +1,20 @@
 import type { FastifyInstance } from "fastify";
 import type { MentionRoutingStrategy } from "@mac/shared";
-import { runRoutedInvocation } from "../agents/run-invocation.js";
 import { resolveMentionRoute } from "../routing/resolve-route.js";
 import { chunkText } from "./chunk-text.js";
 import type { AppDeps } from "./deps.js";
 
 /**
- * Register invoke + stream-echo routes (routing-context + cli-integration entry).
+ * Register invoke (via dispatcher) + stream-echo + invocation inspect/cancel routes.
  * @param app - Fastify instance
- * @param deps - store/hub/agent/cats for routed invocation
+ * @param deps - store/hub/agent/cats/dispatcher
  */
 export function registerInvokeRoutes(app: FastifyInstance, deps: AppDeps): void {
-  const { store, hub, agent, cats } = deps;
+  const { store, hub, agent, cats, dispatcher } = deps;
 
   /**
-   * Invoke one or more cats via @mention routing (M07).
-   * Body.content may include a leading `@A @B …` run; server parses targets.
-   * Without mentions, uses body.catId then thread.defaultCatId.
+   * Resolve @mention route, then enqueue on InvocationDispatcher (M08).
+   * Returns 202 with queueEntryId; bubbles still arrive over WS when the job runs.
    */
   app.post<{
     Params: { id: string };
@@ -24,18 +22,18 @@ export function registerInvokeRoutes(app: FastifyInstance, deps: AppDeps): void 
       content?: string;
       authorId?: string;
       systemSnippet?: string;
-      /** Legacy single-target hint when content has no leading mentions. */
       catId?: string;
       strategy?: MentionRoutingStrategy;
+      priority?: number;
     };
   }>("/api/threads/:id/messages/invoke", async (req, reply) => {
     if (!agent) return reply.code(503).send({ error: "No agent provider configured" });
+    if (!dispatcher) return reply.code(503).send({ error: "Dispatcher not configured" });
     const thread = await store.getThread(req.params.id);
     if (!thread) return reply.code(404).send({ error: "Thread not found" });
     const content = req.body?.content?.trim() ?? "";
     if (!content) return reply.code(400).send({ error: "content required" });
 
-    // Registry list is required for @token resolution; empty → default/explicit only.
     const catList = cats?.list() ?? [];
     const route = resolveMentionRoute({
       content,
@@ -48,35 +46,77 @@ export function registerInvokeRoutes(app: FastifyInstance, deps: AppDeps): void 
       return reply.code(400).send({ error: route.error });
     }
 
-    const result = await runRoutedInvocation({
-      store,
-      hub,
-      agent,
+    const { entry, started } = dispatcher.enqueue({
       threadId: thread.id,
       prompt: route.prompt,
       catIds: route.catIds,
       authorId: req.body?.authorId ?? "operator",
+      priority: req.body?.priority,
       systemSnippetFor: (catId) =>
-        // Body systemSnippet is a single-target escape hatch; multi-target uses each cat's snippet.
         (route.catIds.length === 1 ? req.body?.systemSnippet : undefined) ??
         cats?.get(catId)?.systemSnippet,
     });
 
     return reply.code(202).send({
-      userMessage: result.userMessage,
-      // Back-compat for M04/M05 clients that read a single assistantMessage.
-      assistantMessage: result.assistantMessages[0],
-      assistantMessages: result.assistantMessages,
-      catIds: result.catIds,
-      catId: result.catIds[0],
+      queueEntryId: entry.id,
+      status: entry.status,
+      started,
+      catIds: entry.catIds,
+      catId: entry.catIds[0],
       strategy: route.strategy,
+      entry,
     });
   });
 
   /**
-   * Demo stream without an agent adapter:
-   * 1) append the operator message
-   * 2) stream an assistant echo via message.delta → message.completed
+   * List queue entries for a thread (newest first).
+   */
+  app.get<{ Params: { id: string } }>("/api/threads/:id/invocations", async (req, reply) => {
+    if (!dispatcher) return reply.code(503).send({ error: "Dispatcher not configured" });
+    const thread = await store.getThread(req.params.id);
+    if (!thread) return reply.code(404).send({ error: "Thread not found" });
+    const entries = dispatcher.listEntries(thread.id);
+    return { entries };
+  });
+
+  /**
+   * Fetch one queue entry + its TurnExecution rows.
+   */
+  app.get<{ Params: { id: string; entryId: string } }>(
+    "/api/threads/:id/invocations/:entryId",
+    async (req, reply) => {
+      if (!dispatcher) return reply.code(503).send({ error: "Dispatcher not configured" });
+      const thread = await store.getThread(req.params.id);
+      if (!thread) return reply.code(404).send({ error: "Thread not found" });
+      const entry = dispatcher.getEntry(req.params.entryId);
+      if (!entry || entry.threadId !== thread.id) {
+        return reply.code(404).send({ error: "Invocation not found" });
+      }
+      const turns = dispatcher.listTurns(entry.id);
+      return { entry, turns };
+    },
+  );
+
+  /**
+   * Cancel a queued or running invocation (AbortSignal → agent stop).
+   */
+  app.post<{ Params: { id: string; entryId: string }; Body: { reason?: string } }>(
+    "/api/threads/:id/invocations/:entryId/cancel",
+    async (req, reply) => {
+      if (!dispatcher) return reply.code(503).send({ error: "Dispatcher not configured" });
+      const thread = await store.getThread(req.params.id);
+      if (!thread) return reply.code(404).send({ error: "Thread not found" });
+      const entry = dispatcher.getEntry(req.params.entryId);
+      if (!entry || entry.threadId !== thread.id) {
+        return reply.code(404).send({ error: "Invocation not found" });
+      }
+      const updated = dispatcher.cancel(entry.id, req.body?.reason);
+      return { entry: updated, turns: dispatcher.listTurns(entry.id) };
+    },
+  );
+
+  /**
+   * Demo stream without an agent adapter (bypasses dispatcher — not a real invoke).
    */
   app.post<{
     Params: { id: string };

@@ -17,3 +17,11 @@ export type { AgentIdentity, CatConfig } from "./types/cat.js";
 export type { Thread, ThreadStatus, ThreadSummary } from "./types/thread.js";
 export type { Message, MessageRole, MessageStatus } from "./types/message.js";
 export type { PlatformEvent } from "./types/events.js";
+export type {
+  CancelToken,
+  QueueEntry,
+  QueueEntryStatus,
+  TurnExecution,
+  TurnExecutionStatus,
+} from "./types/dispatch.js";
+

@@ -10,8 +10,9 @@ Structure cleanup (`chore/structure-align-cells`): keep Fastify + React; align f
 | `http/routes-meta.ts` | scaffold | `/health`, `/` |
 | `http/routes-cats.ts` | identity-session | `GET /api/cats` |
 | `http/routes-threads.ts` | transport / identity-session | threads + messages REST |
-| `http/routes-invoke.ts` | routing-context + cli-integration | invoke + stream-echo |
+| `http/routes-invoke.ts` | routing-context + dispatch + cli-integration | invoke enqueue, cancel, stream-echo |
 | `http/routes-ws.ts` | transport | `/ws` hydrate + subscribe |
+| `dispatch/` | dispatch | InvocationDispatcher, TurnExecutionStore, reconcile |
 | `routing/` | routing-context | mention → catIds policy |
 | `agents/` | cli-integration | providers + `runRoutedInvocation` |
 | `cats/` | identity-session | read-only registry load |

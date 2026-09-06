@@ -6,7 +6,7 @@ Platform layer **above** Agent CLIs so multiple model families work as one team.
 
 ## Status
 
-**Wave 2 / M07** — @mention routing + structure aligned to ownership cells (`chore/structure-align-cells`).
+**Wave 2 / M08** — dispatch queue, busy gate, cancel (`feat/m08-dispatch`).
 
 Roadmap: [`build-plan.md`](./build-plan.md) · Vision: [`docs/VISION.md`](./docs/VISION.md) · Decisions: [`docs/DECISIONS.md`](./docs/DECISIONS.md)
 

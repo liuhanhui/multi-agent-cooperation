@@ -19,7 +19,7 @@ Why: one sentence
 | `cli-integration` | active | Claude Code spawn/stdio → platform events | M04 |
 | `thread-navigation` | active (thin) | Sidebar thread list + session restore | M06 |
 | `routing-context` | active (thin) | @mention parse + serial multi-target route | M07 |
-| `dispatch` | planned | Invocation queue, cancel, busy gate | M08 |
+| `dispatch` | active | InvocationQueue, busy gate, cancel, orphan reconcile | M08 |
 | `callback-auth` | planned | Invocation credentials for callbacks | M10 |
 | `hub-action-surface` | planned | Rich blocks, Hub actions, skills UI | M12 / M14 |
 | `mcp-surface-governance` | planned | MCP tool identity and exposure | M13 |

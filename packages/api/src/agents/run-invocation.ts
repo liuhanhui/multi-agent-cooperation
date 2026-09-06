@@ -1,4 +1,5 @@
-import type { Message } from "@mac/shared";
+import { randomUUID } from "node:crypto";
+import type { Message, TurnExecutionStatus } from "@mac/shared";
 import type { MacStore } from "../store/types.js";
 import type { ThreadHub } from "../ws/thread-hub.js";
 import type { AgentProvider } from "./types.js";
@@ -22,6 +23,17 @@ export interface RunInvocationResult {
   assistantMessage: Message;
 }
 
+/** Turn lifecycle callback used by InvocationDispatcher to persist TurnExecution rows. */
+export interface TurnHookEvent {
+  phase: "start" | "end";
+  turnId: string;
+  catId: string;
+  attempt: number;
+  messageId: string | null;
+  status: TurnExecutionStatus;
+  error?: string;
+}
+
 export interface RunRoutedInvocationParams {
   store: MacStore;
   hub: ThreadHub;
@@ -36,6 +48,15 @@ export interface RunRoutedInvocationParams {
   authorId?: string;
   cwd?: string;
   timeoutMs?: number;
+  /** AbortSignal from dispatcher CancelToken / AbortController. */
+  signal?: AbortSignal;
+  /**
+   * When true, await the full serial chain before returning (dispatcher).
+   * When false (HTTP legacy), return after first assistant bubble is created.
+   */
+  awaitCompletion?: boolean;
+  /** Optional turn start/end hook for TurnExecutionStore. */
+  onTurn?: (event: TurnHookEvent) => void;
 }
 
 export interface RunRoutedInvocationResult {
@@ -47,7 +68,7 @@ export interface RunRoutedInvocationResult {
 
 /**
  * Stream into an already-created pending assistant bubble until terminal.
- * @param params - store/hub/agent, the pending message, and invoke inputs
+ * @param params - store/hub/agent, the pending message, invoke inputs, optional signal
  * @returns Final assistant message (completed or failed)
  */
 async function streamExistingAssistant(params: {
@@ -60,9 +81,38 @@ async function streamExistingAssistant(params: {
   systemSnippet?: string;
   cwd?: string;
   timeoutMs?: number;
+  signal?: AbortSignal;
 }): Promise<Message> {
-  const { store, hub, agent, threadId, prompt, assistantMessage, systemSnippet, cwd, timeoutMs } =
-    params;
+  const {
+    store,
+    hub,
+    agent,
+    threadId,
+    prompt,
+    assistantMessage,
+    systemSnippet,
+    cwd,
+    timeoutMs,
+    signal,
+  } = params;
+
+  const failCancelled = async (): Promise<Message> => {
+    const current = await store.getMessage(assistantMessage.id);
+    if (current && (current.status === "completed" || current.status === "failed")) {
+      return current;
+    }
+    const failed = await store.failMessage(assistantMessage.id, "cancelled");
+    hub.publish(threadId, {
+      type: "message.failed",
+      message: failed,
+      error: "cancelled",
+    });
+    return failed;
+  };
+
+  if (signal?.aborted) {
+    return failCancelled();
+  }
 
   try {
     let sawTerminal = false;
@@ -73,7 +123,11 @@ async function streamExistingAssistant(params: {
       systemSnippet,
       cwd,
       timeoutMs,
+      signal,
     })) {
+      if (signal?.aborted) {
+        return failCancelled();
+      }
       if (sawTerminal) continue;
       if (event.type === "delta") {
         const updated = await store.applyDelta(assistantMessage.id, event.text);
@@ -93,15 +147,19 @@ async function streamExistingAssistant(params: {
         hub.publish(threadId, { type: "message.completed", message: terminal });
       } else if (event.type === "failed") {
         sawTerminal = true;
-        terminal = await store.failMessage(assistantMessage.id, event.error);
+        // Normalize provider abort into cancelled wording for UI/reconciler.
+        const err =
+          signal?.aborted || event.error === "aborted" ? "cancelled" : event.error;
+        terminal = await store.failMessage(assistantMessage.id, err);
         hub.publish(threadId, {
           type: "message.failed",
           message: terminal,
-          error: event.error,
+          error: err,
         });
       }
     }
     if (!sawTerminal) {
+      if (signal?.aborted) return failCancelled();
       terminal = await store.failMessage(assistantMessage.id, "agent ended without result");
       hub.publish(threadId, {
         type: "message.failed",
@@ -111,6 +169,7 @@ async function streamExistingAssistant(params: {
     }
     return terminal;
   } catch (err) {
+    if (signal?.aborted) return failCancelled();
     const error = err instanceof Error ? err.message : String(err);
     const current = await store.getMessage(assistantMessage.id);
     // Another path may have already finalized the bubble; do not overwrite.
@@ -129,7 +188,7 @@ async function streamExistingAssistant(params: {
 
 /**
  * Create a pending assistant bubble for one cat and stream until terminal.
- * @param params - store/hub/agent plus cat identity and prompt
+ * @param params - store/hub/agent plus cat identity, prompt, optional signal/hooks
  * @returns Final assistant message (completed or failed)
  */
 async function runAssistantTurn(params: {
@@ -142,7 +201,20 @@ async function runAssistantTurn(params: {
   systemSnippet?: string;
   cwd?: string;
   timeoutMs?: number;
+  signal?: AbortSignal;
+  attempt: number;
+  onTurn?: (event: TurnHookEvent) => void;
 }): Promise<Message> {
+  const turnId = randomUUID();
+  params.onTurn?.({
+    phase: "start",
+    turnId,
+    catId: params.assistantAuthorId,
+    attempt: params.attempt,
+    messageId: null,
+    status: "running",
+  });
+
   const assistantMessage = await params.store.appendMessage({
     threadId: params.threadId,
     role: "assistant",
@@ -151,7 +223,17 @@ async function runAssistantTurn(params: {
     status: "pending",
   });
   params.hub.publish(params.threadId, { type: "message.created", message: assistantMessage });
-  return streamExistingAssistant({
+
+  params.onTurn?.({
+    phase: "start",
+    turnId,
+    catId: params.assistantAuthorId,
+    attempt: params.attempt,
+    messageId: assistantMessage.id,
+    status: "running",
+  });
+
+  const terminal = await streamExistingAssistant({
     store: params.store,
     hub: params.hub,
     agent: params.agent,
@@ -161,15 +243,32 @@ async function runAssistantTurn(params: {
     systemSnippet: params.systemSnippet,
     cwd: params.cwd,
     timeoutMs: params.timeoutMs,
+    signal: params.signal,
   });
+
+  const status: TurnExecutionStatus =
+    terminal.status === "completed"
+      ? "completed"
+      : terminal.error === "cancelled" || params.signal?.aborted
+        ? "cancelled"
+        : "failed";
+
+  params.onTurn?.({
+    phase: "end",
+    turnId,
+    catId: params.assistantAuthorId,
+    attempt: params.attempt,
+    messageId: terminal.id,
+    status,
+    error: terminal.error,
+  });
+
+  return terminal;
 }
 
 /**
  * Append the user message, then run one or more assistant turns in serial.
- * Returns as soon as the first assistant bubble is created; remaining targets
- * continue in the background so HTTP can answer 202 without waiting on the
- * full multi-cat chain (queue/cancel lands in M08).
- * @param params - targets, prompt, store/hub/agent, systemSnippetFor(catId)
+ * @param params - targets, prompt, store/hub/agent, optional signal / awaitCompletion / onTurn
  * @returns userMessage, first assistantMessages[], and catIds
  */
 export async function runRoutedInvocation(
@@ -186,6 +285,9 @@ export async function runRoutedInvocation(
     authorId = "operator",
     cwd,
     timeoutMs,
+    signal,
+    awaitCompletion = false,
+    onTurn,
   } = params;
 
   if (catIds.length === 0) {
@@ -201,32 +303,15 @@ export async function runRoutedInvocation(
   });
   hub.publish(threadId, { type: "message.created", message: userMessage });
 
-  const firstCatId = catIds[0]!;
-  const firstAssistant = await store.appendMessage({
-    threadId,
-    role: "assistant",
-    authorId: firstCatId,
-    content: "",
-    status: "pending",
-  });
-  hub.publish(threadId, { type: "message.created", message: firstAssistant });
-
-  // Background serial chain: finish first turn, then create+stream each next cat.
-  void (async () => {
-    await streamExistingAssistant({
-      store,
-      hub,
-      agent,
-      threadId,
-      prompt,
-      assistantMessage: firstAssistant,
-      systemSnippet: systemSnippetFor(firstCatId),
-      cwd,
-      timeoutMs,
-    });
-
-    for (const catId of catIds.slice(1)) {
-      await runAssistantTurn({
+  /**
+   * Run all serial cat turns; stop early when cancelled.
+   */
+  const runChain = async (): Promise<Message[]> => {
+    const assistants: Message[] = [];
+    let attempt = 1;
+    for (const catId of catIds) {
+      if (signal?.aborted) break;
+      const terminal = await runAssistantTurn({
         store,
         hub,
         agent,
@@ -236,7 +321,106 @@ export async function runRoutedInvocation(
         systemSnippet: systemSnippetFor(catId),
         cwd,
         timeoutMs,
+        signal,
+        attempt,
+        onTurn,
       });
+      assistants.push(terminal);
+      attempt += 1;
+      // Do not continue serial chain after cancel/failure of a turn.
+      if (terminal.status !== "completed") break;
+    }
+    return assistants;
+  };
+
+  if (awaitCompletion) {
+    const assistants = await runChain();
+    return {
+      userMessage,
+      assistantMessages: assistants.length > 0 ? assistants : [],
+      catIds,
+    };
+  }
+
+  // Legacy HTTP path: create first bubble eagerly so 202 can include it, stream in background.
+  const firstCatId = catIds[0]!;
+  const turnId = randomUUID();
+  onTurn?.({
+    phase: "start",
+    turnId,
+    catId: firstCatId,
+    attempt: 1,
+    messageId: null,
+    status: "running",
+  });
+
+  const firstAssistant = await store.appendMessage({
+    threadId,
+    role: "assistant",
+    authorId: firstCatId,
+    content: "",
+    status: "pending",
+  });
+  hub.publish(threadId, { type: "message.created", message: firstAssistant });
+  onTurn?.({
+    phase: "start",
+    turnId,
+    catId: firstCatId,
+    attempt: 1,
+    messageId: firstAssistant.id,
+    status: "running",
+  });
+
+  void (async () => {
+    const terminal = await streamExistingAssistant({
+      store,
+      hub,
+      agent,
+      threadId,
+      prompt,
+      assistantMessage: firstAssistant,
+      systemSnippet: systemSnippetFor(firstCatId),
+      cwd,
+      timeoutMs,
+      signal,
+    });
+    const status: TurnExecutionStatus =
+      terminal.status === "completed"
+        ? "completed"
+        : terminal.error === "cancelled" || signal?.aborted
+          ? "cancelled"
+          : "failed";
+    onTurn?.({
+      phase: "end",
+      turnId,
+      catId: firstCatId,
+      attempt: 1,
+      messageId: terminal.id,
+      status,
+      error: terminal.error,
+    });
+
+    if (terminal.status !== "completed" || signal?.aborted) return;
+
+    let attempt = 2;
+    for (const catId of catIds.slice(1)) {
+      if (signal?.aborted) break;
+      const next = await runAssistantTurn({
+        store,
+        hub,
+        agent,
+        threadId,
+        prompt,
+        assistantAuthorId: catId,
+        systemSnippet: systemSnippetFor(catId),
+        cwd,
+        timeoutMs,
+        signal,
+        attempt,
+        onTurn,
+      });
+      attempt += 1;
+      if (next.status !== "completed") break;
     }
   })();
 

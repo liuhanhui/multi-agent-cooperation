@@ -367,6 +367,7 @@ Ownership 总图：`docs/architecture/ownership/README.md`
 
 ## Changelog
 
+- 2026-09-06：M08 — InvocationDispatcher（FIFO+priority）、线程/猫 busy gate、cancel、启动 orphan reconcile；`docs/architecture/dispatch-system.md`。
 - 2026-09-06：结构整理 — API `http/routes-*`、Web `api/`+`hooks/`、shared `types/*`；见 `docs/architecture/code-map.md`。
 - 2026-09-04：M07 — shared `parseMentions`、API `resolveMentionRoute`、串行多目标 invoke；文档 `at-mention-routing-system.md`。
 - 2026-09-03：M06 — Chat UI（侧栏/气泡/头像）、bubble reducer、@默认猫 mention、刷新恢复 active thread。
