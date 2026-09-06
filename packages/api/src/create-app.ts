@@ -5,8 +5,11 @@ import type { CatRegistry } from "./cats/load-cat-config.js";
 import { InvocationDispatcher } from "./dispatch/dispatcher.js";
 import { reconcileOrphanMessages } from "./dispatch/reconcile.js";
 import { TurnExecutionStore } from "./dispatch/turn-execution-store.js";
+import { HandoffService } from "./handoff/handoff-service.js";
+import { HandoffStore } from "./handoff/handoff-store.js";
 import type { AppDeps } from "./http/deps.js";
 import { registerCatRoutes } from "./http/routes-cats.js";
+import { registerHandoffRoutes } from "./http/routes-handoffs.js";
 import { registerInvokeRoutes } from "./http/routes-invoke.js";
 import { registerMetaRoutes } from "./http/routes-meta.js";
 import { registerThreadRoutes } from "./http/routes-threads.js";
@@ -33,6 +36,8 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   const app = Fastify({ logger: false });
   const hub = new ThreadHub();
   const executions = new TurnExecutionStore();
+  const handoffStore = new HandoffStore();
+
   const dispatcher = opts.agent
     ? new InvocationDispatcher({
         store: opts.store,
@@ -42,6 +47,20 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
       })
     : undefined;
 
+  const handoffs = dispatcher
+    ? new HandoffService({
+        store: opts.store,
+        hub,
+        handoffs: handoffStore,
+        dispatcher,
+      })
+    : undefined;
+
+  // Break construct cycle: dispatcher auto-review calls back into handoffs.
+  if (dispatcher && handoffs) {
+    dispatcher.attachHandoffs(handoffs);
+  }
+
   const deps: AppDeps = {
     store: opts.store,
     hub,
@@ -50,6 +69,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     agent: opts.agent,
     cats: opts.cats,
     dispatcher,
+    handoffs,
   };
 
   // Restart safety: pending/streaming bubbles → failed(orphan-recovered).
@@ -63,6 +83,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   registerCatRoutes(app, deps);
   registerThreadRoutes(app, deps);
   registerInvokeRoutes(app, deps);
+  registerHandoffRoutes(app, deps);
   registerWsRoutes(app, deps);
 
   return app;

@@ -13,6 +13,11 @@ export interface EnqueueInvocationInput {
   authorId?: string;
   priority?: number;
   systemSnippetFor: (catId: string) => string | undefined;
+  /**
+   * When set, after this entry completes successfully, create an auto handoff
+   * from the last producer cat to `toCatId` and enqueue a review invoke (M09).
+   */
+  autoReview?: { toCatId: string };
 }
 
 export interface EnqueueInvocationResult {
@@ -26,6 +31,18 @@ export interface DispatcherDeps {
   hub: ThreadHub;
   agent: AgentProvider;
   executions: TurnExecutionStore;
+  /** Optional M09 handoff service for auto-review after completion. */
+  handoffs?: {
+    createAutoReview: (params: {
+      threadId: string;
+      fromCatId: string;
+      toCatId: string;
+      producerContent: string;
+      sourceMessageId: string | null;
+      sourceQueueEntryId: string;
+      systemSnippetFor?: (catId: string) => string | undefined;
+    }) => Promise<unknown>;
+  };
 }
 
 interface LiveCancel {
@@ -41,10 +58,21 @@ export class InvocationDispatcher {
     string,
     (catId: string) => string | undefined
   >();
+  private readonly autoReviews = new Map<string, { toCatId: string }>();
   /** Entry ids currently executing (background). */
   private readonly inFlight = new Set<string>();
 
   constructor(private readonly deps: DispatcherDeps) {}
+
+  /**
+   * Late-bind HandoffService after both dispatcher and handoffs exist (avoids cycle).
+   * @param handoffs - Service exposing createAutoReview
+   */
+  attachHandoffs(
+    handoffs: NonNullable<DispatcherDeps["handoffs"]>,
+  ): void {
+    this.deps.handoffs = handoffs;
+  }
 
   /**
    * Enqueue an invoke job; start immediately when thread/cats are free.
@@ -66,6 +94,9 @@ export class InvocationDispatcher {
     };
     this.deps.executions.putEntry(entry);
     this.snippetResolvers.set(entry.id, input.systemSnippetFor);
+    if (input.autoReview) {
+      this.autoReviews.set(entry.id, input.autoReview);
+    }
 
     const started = this.tryStart(entry.id);
     // Keep pumping in case other queued jobs became runnable.
@@ -234,6 +265,7 @@ export class InvocationDispatcher {
         this.finalizeEntry(entryId, "failed", failedTurn?.error ?? "turn failed");
       } else {
         this.finalizeEntry(entryId, "completed");
+        await this.maybeAutoReview(entryId, entry, turns);
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -245,9 +277,43 @@ export class InvocationDispatcher {
     } finally {
       this.liveCancels.delete(entryId);
       this.snippetResolvers.delete(entryId);
+      this.autoReviews.delete(entryId);
       this.inFlight.delete(entryId);
       void this.pump();
     }
+  }
+
+  /**
+   * After a successful producer job, optionally hand off to a reviewer cat (M09).
+   * Skips when autoReview unset, or when this job was already a multi-target chain
+   * that included the reviewer (avoid double review).
+   */
+  private async maybeAutoReview(
+    entryId: string,
+    entry: QueueEntry,
+    turns: TurnExecution[],
+  ): Promise<void> {
+    const auto = this.autoReviews.get(entryId);
+    if (!auto || !this.deps.handoffs) return;
+    if (entry.catIds.includes(auto.toCatId)) return;
+
+    const completedTurns = turns.filter((t) => t.status === "completed" && t.messageId);
+    const last = completedTurns.at(-1);
+    if (!last?.messageId) return;
+
+    const message = await this.deps.store.getMessage(last.messageId);
+    const producerContent = message?.content ?? "";
+    const systemSnippetFor = this.snippetResolvers.get(entryId);
+
+    await this.deps.handoffs.createAutoReview({
+      threadId: entry.threadId,
+      fromCatId: last.catId,
+      toCatId: auto.toCatId,
+      producerContent,
+      sourceMessageId: last.messageId,
+      sourceQueueEntryId: entryId,
+      systemSnippetFor,
+    });
   }
 
   /**

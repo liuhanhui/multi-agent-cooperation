@@ -13,6 +13,7 @@ Structure cleanup (`chore/structure-align-cells`): keep Fastify + React; align f
 | `http/routes-invoke.ts` | routing-context + dispatch + cli-integration | invoke enqueue, cancel, stream-echo |
 | `http/routes-ws.ts` | transport | `/ws` hydrate + subscribe |
 | `dispatch/` | dispatch | InvocationDispatcher, TurnExecutionStore, reconcile |
+| `handoff/` | dispatch + messaging | Structured five-piece A2A handoff + review trigger |
 | `routing/` | routing-context | mention → catIds policy |
 | `agents/` | cli-integration | providers + `runRoutedInvocation` |
 | `cats/` | identity-session | read-only registry load |

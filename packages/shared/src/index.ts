@@ -24,4 +24,14 @@ export type {
   TurnExecution,
   TurnExecutionStatus,
 } from "./types/dispatch.js";
+export {
+  buildAutoReviewPayload,
+  formatHandoffReviewPrompt,
+  parseHandoffFivePiece,
+  type Handoff,
+  type HandoffFivePiece,
+  type HandoffKind,
+  type HandoffReceipt,
+  type HandoffStatus,
+} from "./types/handoff.js";
 
