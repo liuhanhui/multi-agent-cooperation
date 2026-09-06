@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import type { HealthResponse } from "@mac/shared";
+import { listProviderCapabilities } from "../agents/capabilities.js";
 import type { AppDeps } from "./deps.js";
 
 /**
@@ -28,7 +29,13 @@ export function registerMetaRoutes(app: FastifyInstance, deps: AppDeps): void {
       cats: "/api/cats",
       invoke: "/api/threads/:id/messages/invoke",
       callbacks: "/api/callbacks/invocation",
+      providers: "/api/providers",
       ws: "/ws?threadId=",
     },
+  }));
+
+  // Capability table for Hub / operators (M11 output-format differences).
+  app.get("/api/providers", async () => ({
+    providers: listProviderCapabilities(),
   }));
 }

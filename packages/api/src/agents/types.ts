@@ -8,6 +8,11 @@ export type AgentStreamEvent =
 export interface AgentInvokeInput {
   prompt: string;
   threadId: string;
+  /**
+   * Target cat id for this turn (M11).
+   * ProviderRouter uses it to pick the CLI family from cat.provider.
+   */
+  catId?: string;
   systemSnippet?: string;
   cwd?: string;
   timeoutMs?: number;

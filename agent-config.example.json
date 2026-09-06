@@ -11,8 +11,15 @@
       "id": "reviewer",
       "displayName": "Reviewer",
       "role": "review",
-      "provider": "claude-code",
+      "provider": "codex",
       "systemSnippet": "You are the review lead. Prefer defect-first feedback and concrete fixes."
+    },
+    {
+      "id": "builder",
+      "displayName": "Builder",
+      "role": "implementation",
+      "provider": "antigravity",
+      "systemSnippet": "You are the implementation lead. Prefer minimal working changes and clear next steps."
     }
   ]
 }

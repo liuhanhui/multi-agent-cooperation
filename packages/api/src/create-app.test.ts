@@ -13,15 +13,22 @@ const demoCats = createCatRegistry([
     id: "architect",
     displayName: "Architect",
     role: "architecture",
-    provider: "fake",
+    provider: "fake-claude",
     systemSnippet: "sys-architect",
   },
   {
     id: "reviewer",
     displayName: "Reviewer",
     role: "review",
-    provider: "fake",
+    provider: "fake-codex",
     systemSnippet: "sys-reviewer",
+  },
+  {
+    id: "builder",
+    displayName: "Builder",
+    role: "implementation",
+    provider: "fake-antigravity",
+    systemSnippet: "sys-builder",
   },
 ]);
 
@@ -327,10 +334,10 @@ test("GET /api/cats lists registry", async () => {
     const res = await app.inject({ method: "GET", url: "/api/cats" });
     assert.equal(res.statusCode, 200);
     const body = res.json() as { cats: { id: string }[] };
-    assert.equal(body.cats.length, 2);
+    assert.equal(body.cats.length, 3);
     assert.deepEqual(
       body.cats.map((c) => c.id),
-      ["architect", "reviewer"],
+      ["architect", "reviewer", "builder"],
     );
   } finally {
     await app.close();
@@ -347,7 +354,7 @@ test("createThread seeds members from cat registry", async () => {
     });
     assert.equal(created.statusCode, 201);
     const thread = (created.json() as { thread: Thread }).thread;
-    assert.deepEqual(thread.memberIds, ["architect", "reviewer"]);
+    assert.deepEqual(thread.memberIds, ["architect", "reviewer", "builder"]);
     assert.equal(thread.defaultCatId, "architect");
   } finally {
     await app.close();
@@ -728,6 +735,84 @@ test("valid callback token writes assistant message into the bound thread", asyn
     });
     const messages = (history.json() as { messages: { content: string }[] }).messages;
     assert.ok(messages.some((m) => m.content === "note from agent callback"));
+  } finally {
+    await app.close();
+  }
+});
+
+test("new thread seeds three multi-family cats as members", async () => {
+  const { app } = await listen();
+  try {
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/threads",
+      payload: { title: "trio" },
+    });
+    assert.equal(created.statusCode, 201);
+    const thread = (created.json() as { thread: Thread }).thread;
+    assert.deepEqual(thread.memberIds.sort(), ["architect", "builder", "reviewer"]);
+
+    const providers = await app.inject({ method: "GET", url: "/api/providers" });
+    assert.equal(providers.statusCode, 200);
+    const ids = (providers.json() as { providers: { id: string }[] }).providers.map((p) => p.id);
+    assert.ok(ids.includes("codex"));
+    assert.ok(ids.includes("antigravity"));
+  } finally {
+    await app.close();
+  }
+});
+
+test("cross-family autoReview routes producer and reviewer to different adapters", async () => {
+  const invoked: string[] = [];
+  /**
+   * Router that stamps family id into bubble text and records cat→family.
+   */
+  const agent: AgentProvider = {
+    id: "router",
+    async *invoke(input: AgentInvokeInput): AsyncIterable<AgentStreamEvent> {
+      const family =
+        input.catId === "reviewer"
+          ? "fake-codex"
+          : input.catId === "builder"
+            ? "fake-antigravity"
+            : "fake-claude";
+      invoked.push(`${input.catId}:${family}`);
+      yield { type: "delta", text: family };
+      yield { type: "completed", text: `${family} done` };
+    },
+  };
+
+  const { app, store } = await listen(agent);
+  try {
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/threads",
+      payload: { title: "cross-family" },
+    });
+    const threadId = (created.json() as { thread: Thread }).thread.id;
+
+    const invokedRes = await app.inject({
+      method: "POST",
+      url: `/api/threads/${threadId}/messages/invoke`,
+      payload: { content: "@architect draft a plan", autoReviewTo: "reviewer" },
+    });
+    assert.equal(invokedRes.statusCode, 202);
+
+    // Wait until both producer + reviewer turns finished.
+    const start = Date.now();
+    while (Date.now() - start < 4000) {
+      const messages = await store.listMessages(threadId);
+      const assistants = messages.filter((m) => m.role === "assistant" && m.status === "completed");
+      if (assistants.length >= 2) break;
+      await new Promise((r) => setTimeout(r, 20));
+    }
+
+    const messages = await store.listMessages(threadId);
+    const byAuthor = messages.filter((m) => m.role === "assistant" && m.status === "completed");
+    assert.ok(byAuthor.some((m) => m.authorId === "architect" && m.content.includes("fake-claude")));
+    assert.ok(byAuthor.some((m) => m.authorId === "reviewer" && m.content.includes("fake-codex")));
+    assert.ok(invoked.includes("architect:fake-claude"));
+    assert.ok(invoked.includes("reviewer:fake-codex"));
   } finally {
     await app.close();
   }

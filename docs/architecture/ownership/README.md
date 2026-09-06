@@ -16,7 +16,7 @@ Why: one sentence
 | `transport` | active | Local WS ingress + thread subscribe/hydrate; web `api/` + `useThreadSocket` | M03 |
 | `bubble-pipeline` | active | Bubble reducer single-writer + streaming merge | M06 |
 | `identity-session` | active | Cat registry + thread members/defaultCat | M05 |
-| `cli-integration` | active | Claude Code spawn/stdio → platform events | M04 |
+| `cli-integration` | active | Claude Code + Codex + Antigravity spawn/stdio → platform events; capability table | M04 / M11 |
 | `thread-navigation` | active (thin) | Sidebar thread list + session restore | M06 |
 | `routing-context` | active (thin) | @mention parse + serial multi-target route | M07 |
 | `dispatch` | active | InvocationQueue, busy gate, cancel, orphan reconcile; A2A handoff trigger | M08 / M09 |

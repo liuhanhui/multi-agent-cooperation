@@ -16,7 +16,7 @@ Structure cleanup (`chore/structure-align-cells`): keep Fastify + React; align f
 | `callback-auth/` | callback-auth | InvocationCredentialStore + bearer verify |
 | `http/routes-callbacks.ts` | callback-auth | Agent callback ingress + auth-failures |
 | `routing/` | routing-context | mention → catIds policy |
-| `agents/` | cli-integration | providers + `runRoutedInvocation` |
+| `agents/` | cli-integration | providers + router + `runRoutedInvocation` |
 | `cats/` | identity-session | read-only registry load |
 | `store/` | scaffold / persistence | memory + redis ports |
 | `ws/thread-hub.ts` | transport | fan-out |

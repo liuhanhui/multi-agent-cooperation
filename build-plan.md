@@ -144,7 +144,7 @@ W0 → W1 → W2 ─┬→ W3 → W5 → (v1.0)
 
 | 项 | 内容 |
 |---|---|
-| **交付物** | 再接 2 个家族（如 Codex + Gemini/Antigravity/opencode） |
+| **交付物** | 再接 2 个家族（Codex + Antigravity） |
 | **对标 cell** | `identity-session`、`routing-context` |
 | **技术切片** | 输出格式适配器表（stream-json / json / ndjson / plain）；能力差异声明 |
 | **Done** | 三只猫同线程；跨家族 review 真实跑通一次 |
@@ -358,7 +358,7 @@ Ownership 总图：`docs/architecture/ownership/README.md`
 **已钉死（2026-08-30）→ [`docs/DECISIONS.md`](./docs/DECISIONS.md)**
 
 1. Redis 可选降级：是（默认 `MAC_STORE=memory`）
-2. Adapter 顺序：Claude Code → Codex → opencode
+2. Adapter 顺序：Claude Code → Codex → Antigravity
 3. 首发外部通道：GitHub signals
 4. 桌面：不进 v1.0 阻断线
 5. 记忆一期：Evidence + 检索；Profile 在 M17
@@ -367,6 +367,7 @@ Ownership 总图：`docs/architecture/ownership/README.md`
 
 ## Changelog
 
+- 2026-09-06：M11 — Codex + Antigravity（`@builder`）CLI adapters、输出格式能力表、按猫 `provider` 路由；三猫同线程 + 跨家族 autoReview；`docs/architecture/cli-adapters-system.md`。
 - 2026-09-06：M10 — 短时 invocation token、`/api/callbacks/invocation` 鉴权、401/过期可观测、合法回调写入绑定 thread；`docs/architecture/callback-auth-system.md`。
 - 2026-09-06：M09 — 结构化 Handoff 五件套、投递/已接收回执、显式与 autoReviewTo 触发 @B review；`docs/architecture/a2a-handoff-system.md`。
 - 2026-09-06：M08 — InvocationDispatcher（FIFO+priority）、线程/猫 busy gate、cancel、启动 orphan reconcile；`docs/architecture/dispatch-system.md`。
