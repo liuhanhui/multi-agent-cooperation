@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
-import type { MentionRoutingStrategy } from "@mac/shared";
+import type { MentionRoutingStrategy, SkillMatchResult } from "@mac/shared";
 import { resolveMentionRoute } from "../routing/resolve-route.js";
+import { resolveSkillInjection } from "../skills/match-skills.js";
 import { chunkText } from "./chunk-text.js";
 import type { AppDeps } from "./deps.js";
 
@@ -10,7 +11,7 @@ import type { AppDeps } from "./deps.js";
  * @param deps - store/hub/agent/cats/dispatcher
  */
 export function registerInvokeRoutes(app: FastifyInstance, deps: AppDeps): void {
-  const { store, hub, agent, cats, dispatcher } = deps;
+  const { store, hub, agent, cats, dispatcher, skills } = deps;
 
   /**
    * Resolve @mention route, then enqueue on InvocationDispatcher (M08).
@@ -58,6 +59,15 @@ export function registerInvokeRoutes(app: FastifyInstance, deps: AppDeps): void 
       }
     }
 
+    // On-demand skills: match routed prompt; inject only hits under token budget (M12).
+    let skillMatch: SkillMatchResult | undefined;
+    let skillInjection = "";
+    if (skills) {
+      const resolved = resolveSkillInjection(skills, route.prompt);
+      skillMatch = resolved.match;
+      skillInjection = resolved.injection;
+    }
+
     const { entry, started } = dispatcher.enqueue({
       threadId: thread.id,
       prompt: route.prompt,
@@ -65,9 +75,15 @@ export function registerInvokeRoutes(app: FastifyInstance, deps: AppDeps): void 
       authorId: req.body?.authorId ?? "operator",
       priority: req.body?.priority,
       autoReview: autoReviewTo ? { toCatId: autoReviewTo } : undefined,
-      systemSnippetFor: (catId) =>
-        (route.catIds.length === 1 ? req.body?.systemSnippet : undefined) ??
-        cats?.get(catId)?.systemSnippet,
+      systemSnippetFor: (catId) => {
+        const base =
+          (route.catIds.length === 1 ? req.body?.systemSnippet : undefined) ??
+          cats?.get(catId)?.systemSnippet;
+        // Skills match the routed prompt once per invoke; same appendix for every serial cat.
+        const skillBlock = skillInjection;
+        if (base && skillBlock) return `${base}\n\n${skillBlock}`;
+        return skillBlock || base;
+      },
     });
 
     const callback = started ? dispatcher.getCallbackCredential(entry.id) : undefined;
@@ -85,6 +101,12 @@ export function registerInvokeRoutes(app: FastifyInstance, deps: AppDeps): void 
       callbackToken: callback?.token,
       callbackExpiresAt: callback?.expiresAt,
       callbackUrl: callback ? `/api/callbacks/invocation` : undefined,
+      // M12: which skills were injected (empty when no trigger hit).
+      skillsInjected: skillMatch?.injectedIds ?? [],
+      skillsSkipped: skillMatch?.skipped ?? [],
+      skillsTokens: skillMatch
+        ? { used: skillMatch.totalTokens, budget: skillMatch.budgetTokens }
+        : null,
     });
   });
 

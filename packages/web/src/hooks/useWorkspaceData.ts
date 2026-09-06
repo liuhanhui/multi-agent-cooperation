@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import type { CatConfig, HealthResponse, Thread } from "@mac/shared";
+import type { CatConfig, HealthResponse, SkillSummary, Thread } from "@mac/shared";
 import {
   createThread as createThreadRequest,
   fetchCats,
   fetchHealth,
+  fetchSkill,
+  fetchSkills,
   fetchThreads,
   patchThreadMembers,
 } from "../api/endpoints";
@@ -16,6 +18,11 @@ export interface UseWorkspaceDataResult {
   health: HealthResponse | null;
   cats: CatConfig[];
   threads: Thread[];
+  skills: SkillSummary[];
+  skillsBudget: number | null;
+  selectedSkillId: string | null;
+  selectedSkillBody: string | null;
+  selectSkill: (id: string) => Promise<void>;
   activeId: string | null;
   setActiveId: (id: string | null) => void;
   title: string;
@@ -28,14 +35,18 @@ export interface UseWorkspaceDataResult {
 }
 
 /**
- * Load health/cats/threads and own sidebar selection + session restore.
- * Cell: thread-navigation + identity-session (read path).
+ * Load health/cats/threads/skills and own sidebar selection + session restore.
+ * Cell: thread-navigation + identity-session + hub-action-surface (skills browse).
  * @returns Workspace list state and mutators used by the chat shell
  */
 export function useWorkspaceData(): UseWorkspaceDataResult {
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [cats, setCats] = useState<CatConfig[]>([]);
   const [threads, setThreads] = useState<Thread[]>([]);
+  const [skills, setSkills] = useState<SkillSummary[]>([]);
+  const [skillsBudget, setSkillsBudget] = useState<number | null>(null);
+  const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null);
+  const [selectedSkillBody, setSelectedSkillBody] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(() => readActiveThreadId());
   const [title, setTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -64,10 +75,36 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
     void fetchCats()
       .then(setCats)
       .catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)));
+    void fetchSkills()
+      .then((data) => {
+        setSkills(data.skills);
+        setSkillsBudget(data.tokenBudget);
+      })
+      .catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)));
     void refreshThreads().catch((err: unknown) =>
       setError(err instanceof Error ? err.message : String(err)),
     );
   }, [refreshThreads]);
+
+  /**
+   * Toggle/select a skill and load its body for Hub browse.
+   * @param id - Skill id from the catalog
+   */
+  async function selectSkill(id: string): Promise<void> {
+    if (selectedSkillId === id) {
+      setSelectedSkillId(null);
+      setSelectedSkillBody(null);
+      return;
+    }
+    setError(null);
+    try {
+      const skill = await fetchSkill(id);
+      setSelectedSkillId(id);
+      setSelectedSkillBody(skill.body);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
 
   /**
    * Create a thread from the sidebar title field and select it.
@@ -105,6 +142,11 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
     health,
     cats,
     threads,
+    skills,
+    skillsBudget,
+    selectedSkillId,
+    selectedSkillBody,
+    selectSkill,
     activeId,
     setActiveId,
     title,

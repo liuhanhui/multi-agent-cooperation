@@ -3,6 +3,7 @@ import type { InvocationCredentialStore } from "../callback-auth/credential-stor
 import type { CatRegistry } from "../cats/load-cat-config.js";
 import type { InvocationDispatcher } from "../dispatch/dispatcher.js";
 import type { HandoffService } from "../handoff/handoff-service.js";
+import type { SkillRegistry } from "../skills/skill-registry.js";
 import type { MacStore } from "../store/types.js";
 import type { ThreadHub } from "../ws/thread-hub.js";
 
@@ -25,4 +26,6 @@ export interface AppDeps {
   credentials?: InvocationCredentialStore;
   /** Public base URL used when minting callbackUrl for agents. */
   publicBaseUrl?: string;
+  /** M12 skills catalog for browse + on-demand injection. */
+  skills?: SkillRegistry;
 }

@@ -6,7 +6,7 @@ Platform layer **above** Agent CLIs so multiple model families work as one team.
 
 ## Status
 
-**Wave 2 / M11** — Codex + Antigravity CLI adapters with per-cat provider routing (`feat/m11-cli-adapters`).
+**Wave 3 / M12** — skills manifest with on-demand injection (`feat/m12-skills-manifest`).
 
 Roadmap: [`build-plan.md`](./build-plan.md) · Vision: [`docs/VISION.md`](./docs/VISION.md) · Decisions: [`docs/DECISIONS.md`](./docs/DECISIONS.md)
 

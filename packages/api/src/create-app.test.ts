@@ -817,3 +817,69 @@ test("cross-family autoReview routes producer and reviewer to different adapters
     await app.close();
   }
 });
+
+test("GET /api/skills lists TDD request-review debugging", async () => {
+  const { app } = await listen();
+  try {
+    const res = await app.inject({ method: "GET", url: "/api/skills" });
+    assert.equal(res.statusCode, 200);
+    const body = res.json() as { skills: { id: string }[]; tokenBudget: number };
+    assert.ok(body.tokenBudget > 0);
+    const ids = body.skills.map((s) => s.id);
+    assert.ok(ids.includes("tdd"));
+    assert.ok(ids.includes("request-review"));
+    assert.ok(ids.includes("debugging"));
+
+    const detail = await app.inject({ method: "GET", url: "/api/skills/tdd" });
+    assert.equal(detail.statusCode, 200);
+    assert.match((detail.json() as { skill: { body: string } }).skill.body, /TDD/);
+  } finally {
+    await app.close();
+  }
+});
+
+test("invoke injects matched skill and skips when no trigger", async () => {
+  const seenSnippets: string[] = [];
+  const agent: AgentProvider = {
+    id: "spy",
+    async *invoke(input: AgentInvokeInput): AsyncIterable<AgentStreamEvent> {
+      seenSnippets.push(input.systemSnippet ?? "");
+      yield { type: "completed", text: "ok" };
+    },
+  };
+  const { app } = await listen(agent);
+  try {
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/threads",
+      payload: { title: "skills-inject" },
+    });
+    const threadId = (created.json() as { thread: Thread }).thread.id;
+
+    const miss = await app.inject({
+      method: "POST",
+      url: `/api/threads/${threadId}/messages/invoke`,
+      payload: { content: "@architect plain hello with no skill words" },
+    });
+    assert.equal(miss.statusCode, 202);
+    assert.deepEqual((miss.json() as { skillsInjected: string[] }).skillsInjected, []);
+
+    await new Promise((r) => setTimeout(r, 40));
+    assert.ok(seenSnippets.length >= 1);
+    assert.ok(!seenSnippets[0]!.includes("[Skills — on-demand injection]"));
+
+    const hit = await app.inject({
+      method: "POST",
+      url: `/api/threads/${threadId}/messages/invoke`,
+      payload: { content: "@architect please use TDD for this change" },
+    });
+    assert.equal(hit.statusCode, 202);
+    assert.deepEqual((hit.json() as { skillsInjected: string[] }).skillsInjected, ["tdd"]);
+
+    await new Promise((r) => setTimeout(r, 40));
+    const last = seenSnippets[seenSnippets.length - 1] ?? "";
+    assert.match(last, /Skill: tdd/);
+  } finally {
+    await app.close();
+  }
+});

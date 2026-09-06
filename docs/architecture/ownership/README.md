@@ -21,7 +21,7 @@ Why: one sentence
 | `routing-context` | active (thin) | @mention parse + serial multi-target route | M07 |
 | `dispatch` | active | InvocationQueue, busy gate, cancel, orphan reconcile; A2A handoff trigger | M08 / M09 |
 | `callback-auth` | active | Short-lived invocation tokens + callback 401/expiry telemetry | M10 |
-| `hub-action-surface` | planned | Rich blocks, Hub actions, skills UI | M12 / M14 |
+| `hub-action-surface` | active (thin) | Skills catalog browse + on-demand injection (rich blocks later in M14) | M12 |
 | `mcp-surface-governance` | planned | MCP tool identity and exposure | M13 |
 | `portable-governance` | planned | Light SOP / Mission Hub | M15 |
 | `memory` | planned | Evidence + write lanes | M16 / M17 |

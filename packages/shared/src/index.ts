@@ -39,4 +39,9 @@ export type {
   CallbackAuthFailureReason,
   InvocationCredential,
 } from "./types/callback-auth.js";
+export type {
+  SkillDetail,
+  SkillMatchResult,
+  SkillSummary,
+} from "./types/skill.js";
 

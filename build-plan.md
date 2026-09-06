@@ -367,6 +367,7 @@ Ownership 总图：`docs/architecture/ownership/README.md`
 
 ## Changelog
 
+- 2026-09-06：M12 — skills 目录 + manifest、触发按需注入（token 预算）、Hub `/api/skills` 浏览；TDD / request-review / debugging；`docs/architecture/skills-manifest-system.md`。
 - 2026-09-06：M11 — Codex + Antigravity（`@builder`）CLI adapters、输出格式能力表、按猫 `provider` 路由；三猫同线程 + 跨家族 autoReview；`docs/architecture/cli-adapters-system.md`。
 - 2026-09-06：M10 — 短时 invocation token、`/api/callbacks/invocation` 鉴权、401/过期可观测、合法回调写入绑定 thread；`docs/architecture/callback-auth-system.md`。
 - 2026-09-06：M09 — 结构化 Handoff 五件套、投递/已接收回执、显式与 autoReviewTo 触发 @B review；`docs/architecture/a2a-handoff-system.md`。

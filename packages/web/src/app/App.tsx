@@ -2,12 +2,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { invokeMessage, streamEchoMessage } from "../api/endpoints";
 import { mentionSuggestion, parseMentions } from "../chat/mention";
 import { ChatPanel } from "../components/ChatPanel";
+import { SkillsPanel } from "../components/SkillsPanel";
 import { ThreadSidebar } from "../components/ThreadSidebar";
 import { useThreadSocket } from "../hooks/useThreadSocket";
 import { useWorkspaceData } from "../hooks/useWorkspaceData";
 
 /**
- * Chat shell: wires workspace data, WS bubbles, and composer send/mention UX.
+ * Chat shell: wires workspace data, WS bubbles, skills browse, and composer UX.
  * Composition root only — HTTP/WS/routing live in api/ + hooks/ + shared.
  */
 export function App() {
@@ -15,6 +16,11 @@ export function App() {
     health,
     cats,
     threads,
+    skills,
+    skillsBudget,
+    selectedSkillId,
+    selectedSkillBody,
+    selectSkill,
     activeId,
     setActiveId,
     title,
@@ -91,19 +97,19 @@ export function App() {
         <p className="brand">Multi-Agent Cooperation</p>
         <h1 className="page-title">Chat</h1>
         <p className="lede tight">
-          Wave 2 — @A only A; @A @B serial; no mention uses default cat.
+          Wave 3 — skills inject on trigger words (TDD / review / debug); Hub lists the catalog.
         </p>
         <p className="meta">
           health:{" "}
           {health
             ? `${health.status}/${health.store}${health.agent ? `/${health.agent}` : ""}`
             : "…"}{" "}
-          · cats: {cats.length}
+          · cats: {cats.length} · skills: {skills.length}
         </p>
         {error ? <p className="err">{error}</p> : null}
       </header>
 
-      <div className="layout">
+      <div className="layout layout-with-skills">
         <ThreadSidebar
           threads={threads}
           cats={cats}
@@ -133,6 +139,14 @@ export function App() {
             onEcho={() => void sendMessage("echo")}
           />
         )}
+
+        <SkillsPanel
+          skills={skills}
+          tokenBudget={skillsBudget}
+          selectedId={selectedSkillId}
+          detailBody={selectedSkillBody}
+          onSelect={(id) => void selectSkill(id)}
+        />
       </div>
     </main>
   );
