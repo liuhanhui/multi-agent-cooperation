@@ -1,9 +1,10 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import websocket from "@fastify/websocket";
-import type { HealthResponse, PlatformEvent } from "@mac/shared";
+import type { HealthResponse, MentionRoutingStrategy, PlatformEvent } from "@mac/shared";
 import type { AgentProvider } from "./agents/types.js";
-import { runInvocation } from "./agents/run-invocation.js";
+import { runRoutedInvocation } from "./agents/run-invocation.js";
 import type { CatRegistry } from "./cats/load-cat-config.js";
+import { resolveMentionRoute } from "./routing/resolve-route.js";
 import type { MacStore } from "./store/types.js";
 import { ThreadHub } from "./ws/thread-hub.js";
 
@@ -162,10 +163,21 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     return reply.code(201).send({ message });
   });
 
-  /** Invoke the configured AgentProvider and stream assistant output over WS. */
+  /**
+   * Invoke one or more cats via @mention routing (M07).
+   * Body.content may include a leading `@A @B …` run; server parses targets.
+   * Without mentions, uses body.catId then thread.defaultCatId.
+   */
   app.post<{
     Params: { id: string };
-    Body: { content?: string; authorId?: string; systemSnippet?: string; catId?: string };
+    Body: {
+      content?: string;
+      authorId?: string;
+      systemSnippet?: string;
+      /** Legacy single-target hint when content has no leading mentions. */
+      catId?: string;
+      strategy?: MentionRoutingStrategy;
+    };
   }>("/api/threads/:id/messages/invoke", async (req, reply) => {
     if (!agent) return reply.code(503).send({ error: "No agent provider configured" });
     const thread = await store.getThread(req.params.id);
@@ -173,29 +185,42 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     const content = req.body?.content?.trim() ?? "";
     if (!content) return reply.code(400).send({ error: "content required" });
 
-    const catId = req.body?.catId ?? thread.defaultCatId;
-    if (!catId) {
-      return reply.code(400).send({ error: "No default cat configured for this thread" });
-    }
-    if (thread.memberIds.length > 0 && !thread.memberIds.includes(catId)) {
-      return reply.code(400).send({ error: `Cat ${catId} is not a member of this thread` });
-    }
-    const cat = cats?.get(catId);
-    if (cats && !cat) {
-      return reply.code(400).send({ error: `Unknown cat id: ${catId}` });
+    // Registry list is required for @token resolution; empty → default/explicit only.
+    const catList = cats?.list() ?? [];
+    const route = resolveMentionRoute({
+      content,
+      thread,
+      cats: catList,
+      explicitCatId: req.body?.catId,
+      strategy: req.body?.strategy ?? "serial",
+    });
+    if (!route.ok) {
+      return reply.code(400).send({ error: route.error });
     }
 
-    const result = await runInvocation({
+    const result = await runRoutedInvocation({
       store,
       hub,
       agent,
       threadId: thread.id,
-      prompt: content,
+      prompt: route.prompt,
+      catIds: route.catIds,
       authorId: req.body?.authorId ?? "operator",
-      assistantAuthorId: catId,
-      systemSnippet: req.body?.systemSnippet ?? cat?.systemSnippet,
+      systemSnippetFor: (catId) =>
+        // Body systemSnippet is a single-target escape hatch; multi-target uses each cat's snippet.
+        (route.catIds.length === 1 ? req.body?.systemSnippet : undefined) ??
+        cats?.get(catId)?.systemSnippet,
     });
-    return reply.code(202).send({ ...result, catId });
+
+    return reply.code(202).send({
+      userMessage: result.userMessage,
+      // Back-compat for M04/M05 clients that read a single assistantMessage.
+      assistantMessage: result.assistantMessages[0],
+      assistantMessages: result.assistantMessages,
+      catIds: result.catIds,
+      catId: result.catIds[0],
+      strategy: route.strategy,
+    });
   });
 
   /**

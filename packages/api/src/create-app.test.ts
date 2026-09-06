@@ -400,3 +400,129 @@ test("switching defaultCatId changes next invoke systemSnippet and author", asyn
     await app.close();
   }
 });
+
+test("@mention routes to named cat only", async () => {
+  const calls: AgentInvokeInput[] = [];
+  const agent: AgentProvider = {
+    id: "fake",
+    async *invoke(input: AgentInvokeInput): AsyncIterable<AgentStreamEvent> {
+      calls.push(input);
+      yield { type: "completed", text: `ok:${input.systemSnippet ?? ""}` };
+    },
+  };
+  const { app, port } = await listen(agent);
+  try {
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/threads",
+      payload: { title: "mention-one" },
+    });
+    const threadId = (created.json() as { thread: Thread }).thread.id;
+    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws?threadId=${threadId}`);
+    await onceEvent(ws, "thread.hydrated");
+
+    const completed = onceEvent(ws, "message.completed");
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/threads/${threadId}/messages/invoke`,
+      // Default cat is architect; @reviewer must win.
+      payload: { content: "@reviewer please check" },
+    });
+    assert.equal(res.statusCode, 202);
+    const body = res.json() as { catIds: string[]; catId: string };
+    assert.deepEqual(body.catIds, ["reviewer"]);
+    assert.equal(body.catId, "reviewer");
+
+    const event = await completed;
+    assert.equal(event.type, "message.completed");
+    if (event.type === "message.completed") {
+      assert.equal(event.message.authorId, "reviewer");
+    }
+    assert.equal(calls.at(-1)?.systemSnippet, "sys-reviewer");
+    assert.equal(calls.at(-1)?.prompt, "please check");
+    ws.close();
+  } finally {
+    await app.close();
+  }
+});
+
+test("@A @B invokes both cats serially with ordered authors", async () => {
+  const calls: AgentInvokeInput[] = [];
+  const agent: AgentProvider = {
+    id: "fake",
+    async *invoke(input: AgentInvokeInput): AsyncIterable<AgentStreamEvent> {
+      calls.push(input);
+      // Tiny delay so serial ordering is observable if races appear.
+      await new Promise((r) => setTimeout(r, 5));
+      yield { type: "completed", text: `from:${input.systemSnippet ?? ""}` };
+    },
+  };
+  const { app, port } = await listen(agent);
+  try {
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/threads",
+      payload: { title: "mention-multi" },
+    });
+    const threadId = (created.json() as { thread: Thread }).thread.id;
+    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws?threadId=${threadId}`);
+    await onceEvent(ws, "thread.hydrated");
+
+    const authors: string[] = [];
+    const bothDone = new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error("multi-mention timeout")), 5000);
+      ws.on("message", (raw) => {
+        const event = JSON.parse(String(raw)) as PlatformEvent;
+        if (event.type === "message.completed" && event.message.role === "assistant") {
+          authors.push(event.message.authorId);
+          if (authors.length >= 2) {
+            clearTimeout(timer);
+            resolve();
+          }
+        }
+      });
+    });
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/threads/${threadId}/messages/invoke`,
+      payload: { content: "@architect @reviewer please design" },
+    });
+    assert.equal(res.statusCode, 202);
+    const body = res.json() as { catIds: string[]; strategy: string };
+    assert.deepEqual(body.catIds, ["architect", "reviewer"]);
+    assert.equal(body.strategy, "serial");
+
+    await bothDone;
+    assert.deepEqual(authors, ["architect", "reviewer"]);
+    assert.equal(calls.length, 2);
+    assert.equal(calls[0]?.systemSnippet, "sys-architect");
+    assert.equal(calls[1]?.systemSnippet, "sys-reviewer");
+    assert.equal(calls[0]?.prompt, "please design");
+    assert.equal(calls[1]?.prompt, "please design");
+    ws.close();
+  } finally {
+    await app.close();
+  }
+});
+
+test("unknown @mention returns 400", async () => {
+  const { app } = await listen();
+  try {
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/threads",
+      payload: { title: "bad-mention" },
+    });
+    const threadId = (created.json() as { thread: Thread }).thread.id;
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/threads/${threadId}/messages/invoke`,
+      payload: { content: "@ghost hello" },
+    });
+    assert.equal(res.statusCode, 400);
+    assert.match(String((res.json() as { error: string }).error), /unknown/i);
+  } finally {
+    await app.close();
+  }
+});

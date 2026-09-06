@@ -6,7 +6,7 @@ Platform layer **above** Agent CLIs so multiple model families work as one team.
 
 ## Status
 
-**Wave 1 / M06** — chat UI, stable bubbles, @default-cat mention (`feat/m06-chat-ui`).
+**Wave 2 / M07** — @mention routing, serial multi-target invoke (`feat/m07-mention-routing`).
 
 Roadmap: [`build-plan.md`](./build-plan.md) · Vision: [`docs/VISION.md`](./docs/VISION.md) · Decisions: [`docs/DECISIONS.md`](./docs/DECISIONS.md)
 

@@ -16,6 +16,15 @@ interface ChatPanelProps {
   onEcho: () => void;
 }
 
+/**
+ * Active-thread chat surface: default-cat picker, bubble list, and composer.
+ * @param props.thread - Active thread (members + defaultCatId)
+ * @param props.cats - Registry used for labels/avatars and membership filter
+ * @param props.messages - Bubble reducer state for this thread
+ * @param props.draft / onDraftChange - Composer controlled input
+ * @param props.onInsertMention - Prefix `@defaultCat ` into the draft
+ * @param props.onSend / onEcho - Invoke routed agents vs stream-echo demo
+ */
 export function ChatPanel({
   thread,
   cats,
@@ -33,6 +42,7 @@ export function ChatPanel({
     ? cats.filter((c) => thread.memberIds.includes(c.id))
     : cats;
   const defaultCat = cats.find((c) => c.id === thread.defaultCatId) ?? memberCats[0];
+  const secondCat = memberCats.find((c) => c.id !== defaultCat?.id) ?? memberCats[1];
 
   return (
     <section className="chat">
@@ -55,8 +65,17 @@ export function ChatPanel({
           </button>
         </div>
         <p className="chat-hint muted">
-          ws:{wsState} · Send routes to {defaultCat?.displayName ?? "default"} · try{" "}
+          ws:{wsState} · no @ → {defaultCat?.displayName ?? "default"} · try{" "}
           <code>@{defaultCat?.id ?? "architect"} hello</code>
+          {secondCat ? (
+            <>
+              {" "}
+              or{" "}
+              <code>
+                @{defaultCat?.id ?? "architect"} @{secondCat.id} please design
+              </code>
+            </>
+          ) : null}
         </p>
       </div>
 

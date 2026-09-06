@@ -1,5 +1,17 @@
 /** Shared contracts — keep terminal schemas here (extend, don't throw away). */
 
+export {
+  mentionSuggestion,
+  parseLeadingMention,
+  parseMentions,
+  type MentionCat,
+  type ParsedMention,
+  type ParsedMentions,
+} from "./mention.js";
+
+/** Multi-target invoke strategy (M07). Parallel is reserved for a later milestone. */
+export type MentionRoutingStrategy = "serial" | "parallel";
+
 export type HealthStatus = "ok" | "degraded";
 
 export interface HealthResponse {
