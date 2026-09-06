@@ -10,6 +10,14 @@ interface ThreadSidebarProps {
   onSelect: (id: string) => void;
 }
 
+/**
+ * Left rail: create thread + select from list (thread-navigation cell).
+ * @param props.threads - Current thread list from the API
+ * @param props.cats - Used to label each row's default cat
+ * @param props.activeId - Highlighted thread id
+ * @param props.title / onTitleChange - New-thread title field
+ * @param props.onCreate / onSelect - Create and switch actions
+ */
 export function ThreadSidebar({
   threads,
   cats,
