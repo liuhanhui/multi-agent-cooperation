@@ -70,6 +70,8 @@ export function registerInvokeRoutes(app: FastifyInstance, deps: AppDeps): void 
         cats?.get(catId)?.systemSnippet,
     });
 
+    const callback = started ? dispatcher.getCallbackCredential(entry.id) : undefined;
+
     return reply.code(202).send({
       queueEntryId: entry.id,
       status: entry.status,
@@ -79,6 +81,10 @@ export function registerInvokeRoutes(app: FastifyInstance, deps: AppDeps): void 
       strategy: route.strategy,
       autoReviewTo: autoReviewTo ?? null,
       entry,
+      // One-shot visibility for agents/tests; also embedded in AgentInvokeInput.
+      callbackToken: callback?.token,
+      callbackExpiresAt: callback?.expiresAt,
+      callbackUrl: callback ? `/api/callbacks/invocation` : undefined,
     });
   });
 

@@ -367,6 +367,7 @@ Ownership 总图：`docs/architecture/ownership/README.md`
 
 ## Changelog
 
+- 2026-09-06：M10 — 短时 invocation token、`/api/callbacks/invocation` 鉴权、401/过期可观测、合法回调写入绑定 thread；`docs/architecture/callback-auth-system.md`。
 - 2026-09-06：M09 — 结构化 Handoff 五件套、投递/已接收回执、显式与 autoReviewTo 触发 @B review；`docs/architecture/a2a-handoff-system.md`。
 - 2026-09-06：M08 — InvocationDispatcher（FIFO+priority）、线程/猫 busy gate、cancel、启动 orphan reconcile；`docs/architecture/dispatch-system.md`。
 - 2026-09-06：结构整理 — API `http/routes-*`、Web `api/`+`hooks/`、shared `types/*`；见 `docs/architecture/code-map.md`。

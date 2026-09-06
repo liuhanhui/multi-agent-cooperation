@@ -34,4 +34,9 @@ export {
   type HandoffReceipt,
   type HandoffStatus,
 } from "./types/handoff.js";
+export type {
+  CallbackAuthFailure,
+  CallbackAuthFailureReason,
+  InvocationCredential,
+} from "./types/callback-auth.js";
 
