@@ -29,7 +29,7 @@ export interface CodexProviderOptions {
 export function createCodexProvider(opts: CodexProviderOptions = {}): AgentProvider {
   const command = opts.command ?? process.env.MAC_CODEX_COMMAND ?? "codex";
   const defaultCwd = opts.cwd ?? process.env.MAC_AGENT_CWD ?? process.cwd();
-  const defaultTimeout = opts.timeoutMs ?? Number(process.env.MAC_AGENT_TIMEOUT_MS ?? 120_000);
+  const defaultTimeout = opts.timeoutMs ?? Number(process.env.MAC_AGENT_TIMEOUT_MS ?? 600_000);
   const sandbox = opts.sandbox ?? process.env.MAC_CODEX_SANDBOX ?? "workspace-write";
   // Current Codex CLI: `--approve-for-me` replaces old `--ask-for-approval`,
   // and must not be combined with `--sandbox` (mutually exclusive).

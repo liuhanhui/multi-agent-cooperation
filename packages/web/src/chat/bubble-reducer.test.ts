@@ -82,3 +82,35 @@ test("reset clears bubbles", () => {
   const state = bubbleReducer([msg({ id: "m1", seq: 1 })], { type: "reset" });
   assert.deepEqual(state, []);
 });
+
+test("message.progress attaches hint and promotes pending to streaming", () => {
+  let state = bubbleReducer([], {
+    type: "event",
+    event: { type: "message.created", message: msg({ id: "m1", seq: 1, status: "pending" }) },
+  });
+  state = bubbleReducer(state, {
+    type: "event",
+    event: {
+      type: "message.progress",
+      messageId: "m1",
+      threadId: "t1",
+      phase: "running",
+      detail: "agy running (pid 1) · waiting for output…",
+    },
+  });
+  assert.equal(state[0]?.status, "streaming");
+  assert.equal(state[0]?.progress, "agy running (pid 1) · waiting for output…");
+
+  state = bubbleReducer(state, {
+    type: "event",
+    event: {
+      type: "message.delta",
+      messageId: "m1",
+      threadId: "t1",
+      seq: 1,
+      delta: "hi",
+    },
+  });
+  assert.equal(state[0]?.content, "hi");
+  assert.equal(state[0]?.progress, undefined);
+});

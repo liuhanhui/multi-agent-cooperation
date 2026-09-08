@@ -303,6 +303,13 @@ button.ghost {
   line-height: 1.45;
 }
 
+.bubble-progress {
+  margin: 0.35rem 0 0.15rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-style: italic;
+}
+
 .stream-caret {
   display: inline-block;
   width: 0.4rem;

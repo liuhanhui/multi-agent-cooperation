@@ -11,6 +11,7 @@ import {
   prependSystemSnippet,
   prepareSpawnArgs,
   quoteWinShellArg,
+  shouldUseWinShell,
 } from "./cli-line-stream.js";
 import { parseCodexLine } from "./codex-stream-parse.js";
 import { createFakeAgentProvider } from "./fake-provider.js";
@@ -107,6 +108,16 @@ test("prepareSpawnArgs quotes on win32 only", () => {
   } else {
     assert.deepEqual(out, input);
   }
+});
+
+test("shouldUseWinShell is false for absolute exe paths", () => {
+  if (process.platform !== "win32") {
+    assert.equal(shouldUseWinShell("agy"), false);
+    return;
+  }
+  assert.equal(shouldUseWinShell("agy"), true);
+  assert.equal(shouldUseWinShell("C:\\Users\\x\\agy.exe"), false);
+  assert.equal(shouldUseWinShell("C:/tools/agy.exe"), false);
 });
 
 test("fake provider yields deltas then completed", async () => {

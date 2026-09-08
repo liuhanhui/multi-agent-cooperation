@@ -6,7 +6,7 @@ import {
   extractClaudeDelta,
   extractClaudeResultText,
 } from "./claude-stream-parse.js";
-import { prepareSpawnArgs } from "./cli-line-stream.js";
+import { prepareSpawnArgs, quoteWinShellArg, shouldUseWinShell } from "./cli-line-stream.js";
 
 export interface ClaudeCodeProviderOptions {
   /** Executable name or path. Default: claude */
@@ -15,7 +15,7 @@ export interface ClaudeCodeProviderOptions {
   cwd?: string;
   /** Permission mode passed to Claude Code. Default: dontAsk */
   permissionMode?: string;
-  /** Default timeout for an invocation. Default: 120_000 */
+  /** Default timeout for an invocation. Default: 600_000 (10m; coding CLIs need more than 2m). */
   timeoutMs?: number;
 }
 
@@ -24,7 +24,7 @@ export function createClaudeCodeProvider(opts: ClaudeCodeProviderOptions = {}): 
   const defaultCwd = opts.cwd ?? process.env.MAC_AGENT_CWD ?? process.cwd();
   const permissionMode =
     opts.permissionMode ?? process.env.MAC_CLAUDE_PERMISSION_MODE ?? "dontAsk";
-  const defaultTimeout = opts.timeoutMs ?? Number(process.env.MAC_AGENT_TIMEOUT_MS ?? 120_000);
+  const defaultTimeout = opts.timeoutMs ?? Number(process.env.MAC_AGENT_TIMEOUT_MS ?? 600_000);
 
   return {
     id: "claude-code",
@@ -45,14 +45,19 @@ export function createClaudeCodeProvider(opts: ClaudeCodeProviderOptions = {}): 
         args.push("--append-system-prompt", input.systemSnippet);
       }
 
-      // Same Windows shell+quote path as runCliNdjson (spaces in -p / systemSnippet).
-      const child = spawn(command, prepareSpawnArgs(args), {
-        cwd,
-        env: { ...process.env },
-        stdio: ["ignore", "pipe", "pipe"],
-        windowsHide: true,
-        shell: process.platform === "win32",
-      });
+      // Same Windows shell policy as runCliNdjson (argv for .exe; shell for .cmd shims).
+      const useShell = shouldUseWinShell(command);
+      const child = spawn(
+        useShell ? quoteWinShellArg(command) : command,
+        useShell ? prepareSpawnArgs(args) : args,
+        {
+          cwd,
+          env: { ...process.env },
+          stdio: ["ignore", "pipe", "pipe"],
+          windowsHide: true,
+          shell: useShell,
+        },
+      );
 
       const queue: AgentStreamEvent[] = [];
       let wake: (() => void) | null = null;

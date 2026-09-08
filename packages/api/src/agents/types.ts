@@ -1,10 +1,13 @@
 /** Agent adapter contracts (M04). */
 
+export type AgentProgressPhase = "spawning" | "running" | "stdout" | "waiting";
+
 export type AgentStreamEvent =
   | { type: "delta"; text: string }
   | { type: "completed"; text: string }
-  | { type: "failed"; error: string };
-
+  | { type: "failed"; error: string }
+  /** Non-terminal status for Hub (CLI spawn / first output). */
+  | { type: "progress"; phase: AgentProgressPhase; detail: string };
 export interface AgentInvokeInput {
   prompt: string;
   threadId: string;
