@@ -29,12 +29,46 @@ function applyPlatformEvent(state: Message[], event: PlatformEvent): Message[] {
     case "message.created":
     case "message.completed":
     case "message.failed":
-      return upsertById(state, event.message);
+      return upsertById(state, {
+        ...event.message,
+        // Terminal events clear any live CLI progress hint.
+        progress:
+          event.type === "message.completed" || event.type === "message.failed"
+            ? undefined
+            : event.message.progress,
+      });
     case "message.delta":
       return mergeDelta(state, event.messageId, event.threadId, event.seq, event.delta);
+    case "message.progress":
+      return mergeProgress(state, event.messageId, event.detail);
     default:
       return state;
   }
+}
+
+/**
+ * Attach a live progress hint to an in-flight bubble (CLI spawn / waiting for tokens).
+ * @param prev - Current bubble list
+ * @param messageId - Target assistant message
+ * @param detail - Human-readable status line
+ * @returns Updated list (or prev when message missing/terminal)
+ */
+function mergeProgress(prev: Message[], messageId: string, detail: string): Message[] {
+  const idx = prev.findIndex((m) => m.id === messageId);
+  if (idx === -1) return prev;
+  const current = prev[idx];
+  if (!current || current.status === "completed" || current.status === "failed") {
+    return prev;
+  }
+  const next = [...prev];
+  next[idx] = {
+    ...current,
+    // Promote pending → streaming so Hub shows the caret / running chrome.
+    status: current.status === "pending" ? "streaming" : current.status,
+    progress: detail,
+    updatedAt: new Date().toISOString(),
+  };
+  return next;
 }
 
 function dedupeById(messages: Message[]): Message[] {
@@ -87,6 +121,8 @@ function mergeDelta(
     id: current.id,
     content: current.content + delta,
     status: "streaming",
+    // Real tokens replace the CLI progress hint.
+    progress: undefined,
     updatedAt: new Date().toISOString(),
   };
   return next;

@@ -1,5 +1,5 @@
 import { readFileSync, existsSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { createAntigravityProvider } from "./agents/antigravity-provider.js";
 import { createClaudeCodeProvider } from "./agents/claude-code-provider.js";
 import { createCodexProvider } from "./agents/codex-provider.js";
@@ -11,12 +11,30 @@ import { buildApp } from "./create-app.js";
 import { createStore } from "./store/create-store.js";
 
 /**
+ * Resolve `.env` for monorepo: `pnpm --filter @mac/api` runs with cwd=packages/api,
+ * while the real env file lives at the repo root.
+ * @returns Absolute path to the nearest `.env`, or null
+ */
+function resolveEnvPath(): string | null {
+  let dir = process.cwd();
+  for (let i = 0; i < 6; i++) {
+    const candidate = join(dir, ".env");
+    if (existsSync(candidate)) return candidate;
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return null;
+}
+
+/**
  * Load optional `.env` into process.env without overwriting existing keys.
+ * Walks up from cwd so root `.env` is found when API starts under packages/api.
  * Side effect: mutates process.env for keys not already set.
  */
 function loadEnvFile() {
-  const path = join(process.cwd(), ".env");
-  if (!existsSync(path)) return;
+  const path = resolveEnvPath();
+  if (!path) return;
   for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith("#")) continue;

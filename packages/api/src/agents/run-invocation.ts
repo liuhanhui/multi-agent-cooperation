@@ -124,6 +124,15 @@ async function streamExistingAssistant(params: {
     return failCancelled();
   }
 
+  // Immediate Hub feedback before the CLI adapter yields its own progress events.
+  hub.publish(threadId, {
+    type: "message.progress",
+    messageId: assistantMessage.id,
+    threadId,
+    phase: "spawning",
+    detail: `Invoking ${assistantMessage.authorId} via ${agent.id}…`,
+  });
+
   try {
     let sawTerminal = false;
     let terminal: Message = assistantMessage;
@@ -144,7 +153,16 @@ async function streamExistingAssistant(params: {
         return failCancelled();
       }
       if (sawTerminal) continue;
-      if (event.type === "delta") {
+      if (event.type === "progress") {
+        // Live CLI status for Hub; does not change durable message content.
+        hub.publish(threadId, {
+          type: "message.progress",
+          messageId: assistantMessage.id,
+          threadId,
+          phase: event.phase,
+          detail: event.detail,
+        });
+      } else if (event.type === "delta") {
         const updated = await store.applyDelta(assistantMessage.id, event.text);
         hub.publish(threadId, {
           type: "message.delta",

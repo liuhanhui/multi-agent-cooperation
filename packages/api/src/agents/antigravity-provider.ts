@@ -26,7 +26,7 @@ export function createAntigravityProvider(
 ): AgentProvider {
   const command = opts.command ?? process.env.MAC_AGY_COMMAND ?? "agy";
   const defaultCwd = opts.cwd ?? process.env.MAC_AGENT_CWD ?? process.cwd();
-  const defaultTimeout = opts.timeoutMs ?? Number(process.env.MAC_AGENT_TIMEOUT_MS ?? 120_000);
+  const defaultTimeout = opts.timeoutMs ?? Number(process.env.MAC_AGENT_TIMEOUT_MS ?? 600_000);
   const defaultModel = opts.model ?? process.env.MAC_AGY_MODEL;
   const skipPermissions =
     opts.skipPermissions ?? process.env.MAC_AGY_SKIP_PERMISSIONS !== "0";

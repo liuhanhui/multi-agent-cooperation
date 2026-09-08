@@ -20,5 +20,15 @@ export type PlatformEvent =
     }
   | { type: "message.completed"; message: Message }
   | { type: "message.failed"; message: Message; error: string }
+  | {
+      /** Live CLI/agent status for Hub while a bubble is pending/streaming (M13+ UX). */
+      type: "message.progress";
+      messageId: string;
+      threadId: string;
+      /** Coarse phase for styling / i18n. */
+      phase: "spawning" | "running" | "stdout" | "waiting";
+      /** Human-readable detail shown under the bubble status. */
+      detail: string;
+    }
   | { type: "handoff.delivered"; handoff: Handoff }
   | { type: "handoff.acked"; handoff: Handoff };
