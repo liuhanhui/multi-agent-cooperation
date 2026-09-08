@@ -16,7 +16,9 @@ import { registerInvokeRoutes } from "./http/routes-invoke.js";
 import { registerMetaRoutes } from "./http/routes-meta.js";
 import { registerSkillRoutes } from "./http/routes-skills.js";
 import { registerThreadRoutes } from "./http/routes-threads.js";
+import { registerToolRoutes } from "./http/routes-tools.js";
 import { registerWsRoutes } from "./http/routes-ws.js";
+import { ToolRegistry } from "./mcp/tool-registry.js";
 import {
   loadSkillRegistry,
   resolveSkillsRoot,
@@ -41,6 +43,10 @@ export interface AppOptions {
   skillsDir?: string;
   /** Disable skills load (tests that do not need the catalog). */
   disableSkills?: boolean;
+  /** Optional prebuilt tool registry (tests). */
+  tools?: ToolRegistry;
+  /** Disable canonical tools (rare; tests). */
+  disableTools?: boolean;
 }
 
 /**
@@ -70,6 +76,10 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
       : loadSkillRegistry(opts.skillsDir ?? resolveSkillsRoot(), {
           tokenBudgetOverride,
         }));
+
+  const tools =
+    opts.tools ??
+    (opts.disableTools ? undefined : new ToolRegistry({ store: opts.store, hub }));
 
   const dispatcher = opts.agent
     ? new InvocationDispatcher({
@@ -108,6 +118,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     credentials,
     publicBaseUrl,
     skills,
+    tools,
   };
 
   // Restart safety: pending/streaming bubbles → failed(orphan-recovered).
@@ -124,6 +135,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   registerHandoffRoutes(app, deps);
   registerCallbackRoutes(app, deps);
   registerSkillRoutes(app, deps);
+  registerToolRoutes(app, deps);
   registerWsRoutes(app, deps);
 
   return app;

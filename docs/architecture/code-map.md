@@ -18,6 +18,9 @@ Structure cleanup (`chore/structure-align-cells`): keep Fastify + React; align f
 | `routing/` | routing-context | mention → catIds policy |
 | `skills/` (repo) + `api/src/skills/` | hub-action-surface | SKILL.md discovery, match, budget injection |
 | `http/routes-skills.ts` | hub-action-surface | Hub browse GET /api/skills |
+| `mcp/` | mcp-surface-governance | Canonical tool registry, MCP server, executors |
+| `http/routes-tools.ts` | mcp-surface-governance | Hub browse GET /api/tools |
+| `http/routes-callbacks.ts` | callback-auth + mcp-surface-governance | Invocation alias + tool bridge |
 | `cats/` | identity-session | read-only registry load |
 | `store/` | scaffold / persistence | memory + redis ports |
 | `ws/thread-hub.ts` | transport | fan-out |

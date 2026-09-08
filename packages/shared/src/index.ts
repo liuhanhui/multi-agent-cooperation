@@ -44,4 +44,10 @@ export type {
   SkillMatchResult,
   SkillSummary,
 } from "./types/skill.js";
+export type {
+  ToolAnnotations,
+  ToolAspect,
+  ToolCatalogEntry,
+  ToolExposureTier,
+} from "./types/tool.js";
 
