@@ -6,6 +6,7 @@ import {
   extractClaudeDelta,
   extractClaudeResultText,
 } from "./claude-stream-parse.js";
+import { prepareSpawnArgs } from "./cli-line-stream.js";
 
 export interface ClaudeCodeProviderOptions {
   /** Executable name or path. Default: claude */
@@ -44,7 +45,8 @@ export function createClaudeCodeProvider(opts: ClaudeCodeProviderOptions = {}): 
         args.push("--append-system-prompt", input.systemSnippet);
       }
 
-      const child = spawn(command, args, {
+      // Same Windows shell+quote path as runCliNdjson (spaces in -p / systemSnippet).
+      const child = spawn(command, prepareSpawnArgs(args), {
         cwd,
         env: { ...process.env },
         stdio: ["ignore", "pipe", "pipe"],

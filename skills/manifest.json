@@ -1,0 +1,4 @@
+{
+  "tokenBudget": 4000,
+  "skills": ["tdd", "request-review", "debugging"]
+}

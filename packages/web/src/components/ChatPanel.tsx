@@ -51,12 +51,14 @@ export function ChatPanel({
           <label htmlFor="default-cat">Default cat</label>
           <select
             id="default-cat"
-            value={thread.defaultCatId ?? ""}
+            // Prefer thread default; fall back so value always matches an <option>.
+            value={thread.defaultCatId ?? defaultCat?.id ?? ""}
             onChange={(e) => onDefaultCatChange(e.target.value)}
+            disabled={memberCats.length === 0}
           >
             {memberCats.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.displayName} ({c.role})
+                {c.displayName}
               </option>
             ))}
           </select>

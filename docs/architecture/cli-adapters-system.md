@@ -7,7 +7,7 @@ Architecture cell: `cli-integration` (+ cat `provider` on `identity-session`).
 | provider id | CLI | stdout format | systemSnippet |
 |---|---|---|---|
 | `claude-code` | `claude -p … --output-format stream-json` | stream-json (partial deltas) | `--append-system-prompt` |
-| `codex` | `codex exec --json …` | jsonl (full agent_message items) | prepended into prompt |
+| `codex` | `codex exec --json --approve-for-me` (or `--sandbox` alone; not both) | jsonl (full agent_message items) | prepended into prompt |
 | `antigravity` | `agy -p … --output-format stream-json` | stream-json (`text_delta` + `result`) | prepended into prompt |
 | `fake` | in-process | plain | ignored / available |
 

@@ -7,7 +7,11 @@ import {
   extractClaudeDelta,
   extractClaudeResultText,
 } from "./claude-stream-parse.js";
-import { prependSystemSnippet } from "./cli-line-stream.js";
+import {
+  prependSystemSnippet,
+  prepareSpawnArgs,
+  quoteWinShellArg,
+} from "./cli-line-stream.js";
 import { parseCodexLine } from "./codex-stream-parse.js";
 import { createFakeAgentProvider } from "./fake-provider.js";
 import { createProviderRouter } from "./provider-router.js";
@@ -86,6 +90,23 @@ test("capability table lists three CLI families plus fake", () => {
 test("prependSystemSnippet folds identity into prompt", () => {
   assert.equal(prependSystemSnippet("hi"), "hi");
   assert.match(prependSystemSnippet("hi", "Be brief"), /\[System\][\s\S]*Be brief[\s\S]*\[User\]\nhi/);
+});
+
+test("quoteWinShellArg wraps prompts that contain spaces", () => {
+  assert.equal(quoteWinShellArg("hello"), "hello");
+  assert.equal(quoteWinShellArg("hello world"), '"hello world"');
+  assert.equal(quoteWinShellArg('say "hi"'), '"say ""hi"""');
+  assert.equal(quoteWinShellArg(""), '""');
+});
+
+test("prepareSpawnArgs quotes on win32 only", () => {
+  const input = ["exec", "--json", "hello world"];
+  const out = prepareSpawnArgs(input);
+  if (process.platform === "win32") {
+    assert.deepEqual(out, ["exec", "--json", '"hello world"']);
+  } else {
+    assert.deepEqual(out, input);
+  }
 });
 
 test("fake provider yields deltas then completed", async () => {

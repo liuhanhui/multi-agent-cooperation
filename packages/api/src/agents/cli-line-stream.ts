@@ -30,6 +30,30 @@ export interface RunCliNdjsonParams {
 }
 
 /**
+ * Quote one argv token for Windows `spawn({ shell: true })`.
+ * Node joins args with spaces and does not escape; unquoted spaces truncate prompts.
+ * @param arg - Raw argument (may contain spaces / quotes)
+ * @returns cmd.exe-safe token
+ */
+export function quoteWinShellArg(arg: string): string {
+  if (arg.length === 0) return '""';
+  // No whitespace or cmd metacharacters → pass through.
+  if (!/[\s"&<>|^()]/.test(arg)) return arg;
+  // cmd.exe: wrap in doubles; embed doubles by doubling them.
+  return `"${arg.replace(/"/g, '""')}"`;
+}
+
+/**
+ * Prepare argv for spawn: quote on Windows shell so prompts with spaces stay intact.
+ * @param args - Raw argv
+ * @returns Args safe for the current platform spawn mode
+ */
+export function prepareSpawnArgs(args: string[]): string[] {
+  if (process.platform !== "win32") return args;
+  return args.map(quoteWinShellArg);
+}
+
+/**
  * Spawn a CLI, parse NDJSON/plain stdout lines, and yield AgentStreamEvents.
  * @param params - command/args, cwd, timeout, signal, parseLine
  * @yields delta / completed / failed events
@@ -39,7 +63,8 @@ export async function* runCliNdjson(
 ): AsyncIterable<AgentStreamEvent> {
   const { command, args, cwd, timeoutMs, signal, processLabel, parseLine } = params;
 
-  const child = spawn(command, args, {
+  // Windows needs shell for npm .cmd shims; quoting keeps multi-word prompts whole.
+  const child = spawn(command, prepareSpawnArgs(args), {
     cwd,
     env: { ...process.env },
     stdio: ["ignore", "pipe", "pipe"],

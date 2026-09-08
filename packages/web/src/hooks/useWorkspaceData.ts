@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
-import type { CatConfig, HealthResponse, Thread } from "@mac/shared";
+import type { CatConfig, HealthResponse, SkillSummary, Thread, ToolCatalogEntry } from "@mac/shared";
 import {
   createThread as createThreadRequest,
   fetchCats,
   fetchHealth,
+  fetchSkill,
+  fetchSkills,
   fetchThreads,
+  fetchTools,
   patchThreadMembers,
 } from "../api/endpoints";
 import {
@@ -16,6 +19,15 @@ export interface UseWorkspaceDataResult {
   health: HealthResponse | null;
   cats: CatConfig[];
   threads: Thread[];
+  skills: SkillSummary[];
+  skillsBudget: number | null;
+  selectedSkillId: string | null;
+  selectedSkillBody: string | null;
+  selectSkill: (id: string) => Promise<void>;
+  tools: ToolCatalogEntry[];
+  toolAspects: string[];
+  selectedToolId: string | null;
+  selectTool: (id: string) => void;
   activeId: string | null;
   setActiveId: (id: string | null) => void;
   title: string;
@@ -28,14 +40,21 @@ export interface UseWorkspaceDataResult {
 }
 
 /**
- * Load health/cats/threads and own sidebar selection + session restore.
- * Cell: thread-navigation + identity-session (read path).
+ * Load health/cats/threads/skills/tools and own sidebar selection + session restore.
+ * Cell: thread-navigation + identity-session + hub-action-surface + mcp-surface-governance.
  * @returns Workspace list state and mutators used by the chat shell
  */
 export function useWorkspaceData(): UseWorkspaceDataResult {
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [cats, setCats] = useState<CatConfig[]>([]);
   const [threads, setThreads] = useState<Thread[]>([]);
+  const [skills, setSkills] = useState<SkillSummary[]>([]);
+  const [skillsBudget, setSkillsBudget] = useState<number | null>(null);
+  const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null);
+  const [selectedSkillBody, setSelectedSkillBody] = useState<string | null>(null);
+  const [tools, setTools] = useState<ToolCatalogEntry[]>([]);
+  const [toolAspects, setToolAspects] = useState<string[]>([]);
+  const [selectedToolId, setSelectedToolId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(() => readActiveThreadId());
   const [title, setTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -64,10 +83,50 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
     void fetchCats()
       .then(setCats)
       .catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)));
+    void fetchSkills()
+      .then((data) => {
+        setSkills(data.skills);
+        setSkillsBudget(data.tokenBudget);
+      })
+      .catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)));
+    void fetchTools()
+      .then((data) => {
+        setTools(data.tools);
+        setToolAspects(data.aspects);
+      })
+      .catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)));
     void refreshThreads().catch((err: unknown) =>
       setError(err instanceof Error ? err.message : String(err)),
     );
   }, [refreshThreads]);
+
+  /**
+   * Toggle/select a skill and load its body for Hub browse.
+   * @param id - Skill id from the catalog
+   */
+  async function selectSkill(id: string): Promise<void> {
+    if (selectedSkillId === id) {
+      setSelectedSkillId(null);
+      setSelectedSkillBody(null);
+      return;
+    }
+    setError(null);
+    try {
+      const skill = await fetchSkill(id);
+      setSelectedSkillId(id);
+      setSelectedSkillBody(skill.body);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  /**
+   * Toggle tool detail in the Hub catalog rail.
+   * @param id - Semantic tool id
+   */
+  function selectTool(id: string): void {
+    setSelectedToolId((prev) => (prev === id ? null : id));
+  }
 
   /**
    * Create a thread from the sidebar title field and select it.
@@ -105,6 +164,15 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
     health,
     cats,
     threads,
+    skills,
+    skillsBudget,
+    selectedSkillId,
+    selectedSkillBody,
+    selectSkill,
+    tools,
+    toolAspects,
+    selectedToolId,
+    selectTool,
     activeId,
     setActiveId,
     title,

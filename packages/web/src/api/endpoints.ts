@@ -1,4 +1,11 @@
-import type { CatConfig, HealthResponse, Thread } from "@mac/shared";
+import type {
+  CatConfig,
+  HealthResponse,
+  SkillDetail,
+  SkillSummary,
+  Thread,
+  ToolCatalogEntry,
+} from "@mac/shared";
 import { apiJson, apiJsonAccept202 } from "./http";
 
 /**
@@ -16,6 +23,32 @@ export function fetchHealth(): Promise<HealthResponse> {
 export async function fetchCats(): Promise<CatConfig[]> {
   const data = await apiJson<{ cats: CatConfig[] }>("/api/cats");
   return data.cats;
+}
+
+/**
+ * GET /api/skills — Hub browse list + token budget (M12).
+ * @returns skills summaries and budget
+ */
+export async function fetchSkills(): Promise<{ skills: SkillSummary[]; tokenBudget: number }> {
+  return apiJson<{ skills: SkillSummary[]; tokenBudget: number }>("/api/skills");
+}
+
+/**
+ * GET /api/skills/:id — skill detail including markdown body.
+ * @param id - Skill id
+ * @returns SkillDetail
+ */
+export async function fetchSkill(id: string): Promise<SkillDetail> {
+  const data = await apiJson<{ skill: SkillDetail }>(`/api/skills/${id}`);
+  return data.skill;
+}
+
+/**
+ * GET /api/tools — Hub browse for canonical MCP tools (M13).
+ * @returns tools catalog + aspect cut-list
+ */
+export async function fetchTools(): Promise<{ tools: ToolCatalogEntry[]; aspects: string[] }> {
+  return apiJson<{ tools: ToolCatalogEntry[]; aspects: string[] }>("/api/tools");
 }
 
 /**

@@ -30,6 +30,7 @@ export function registerMetaRoutes(app: FastifyInstance, deps: AppDeps): void {
       invoke: "/api/threads/:id/messages/invoke",
       callbacks: "/api/callbacks/invocation",
       providers: "/api/providers",
+      skills: "/api/skills",
       ws: "/ws?threadId=",
     },
   }));
