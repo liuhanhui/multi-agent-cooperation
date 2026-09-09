@@ -68,4 +68,12 @@ export {
   parseMacBlocksFence,
   validateContentBlocks,
 } from "./content-blocks.js";
+export {
+  canAdvanceFeatureStage,
+  FEATURE_STAGE_TRANSITIONS,
+  FEATURE_STAGES,
+  type BulletinBoard,
+  type Feature,
+  type FeatureStage,
+} from "./types/feature.js";
 

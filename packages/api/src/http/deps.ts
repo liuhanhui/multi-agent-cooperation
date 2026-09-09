@@ -2,6 +2,7 @@ import type { AgentProvider } from "../agents/types.js";
 import type { InvocationCredentialStore } from "../callback-auth/credential-store.js";
 import type { CatRegistry } from "../cats/load-cat-config.js";
 import type { InvocationDispatcher } from "../dispatch/dispatcher.js";
+import type { FeatureStore } from "../features/feature-store.js";
 import type { HandoffService } from "../handoff/handoff-service.js";
 import type { ToolRegistry } from "../mcp/tool-registry.js";
 import type { SkillRegistry } from "../skills/skill-registry.js";
@@ -31,4 +32,6 @@ export interface AppDeps {
   skills?: SkillRegistry;
   /** M13 canonical tools for Hub catalog + callback/MCP bridge. */
   tools?: ToolRegistry;
+  /** M15 Mission Hub feature store + bulletin. */
+  features?: FeatureStore;
 }

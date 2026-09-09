@@ -1,7 +1,19 @@
 import { useCallback, useEffect, useState } from "react";
-import type { CatConfig, HealthResponse, SkillSummary, Thread, ToolCatalogEntry } from "@mac/shared";
+import type {
+  BulletinBoard,
+  CatConfig,
+  FeatureStage,
+  HealthResponse,
+  SkillSummary,
+  Thread,
+  ToolCatalogEntry,
+} from "@mac/shared";
 import {
+  advanceFeature,
+  bindFeatureThread,
+  createFeature,
   createThread as createThreadRequest,
+  fetchBulletin,
   fetchCats,
   fetchHealth,
   fetchSkill,
@@ -28,6 +40,15 @@ export interface UseWorkspaceDataResult {
   toolAspects: string[];
   selectedToolId: string | null;
   selectTool: (id: string) => void;
+  bulletin: BulletinBoard | null;
+  refreshBulletin: () => Promise<void>;
+  createMissionFeature: (input: {
+    title: string;
+    summary?: string;
+    ballHolderId?: string | null;
+  }) => Promise<void>;
+  advanceMissionFeature: (featureId: string, stage: FeatureStage) => Promise<void>;
+  bindMissionThread: (featureId: string) => Promise<void>;
   activeId: string | null;
   setActiveId: (id: string | null) => void;
   title: string;
@@ -40,8 +61,8 @@ export interface UseWorkspaceDataResult {
 }
 
 /**
- * Load health/cats/threads/skills/tools and own sidebar selection + session restore.
- * Cell: thread-navigation + identity-session + hub-action-surface + mcp-surface-governance.
+ * Load health/cats/threads/skills/tools/bulletin and own sidebar selection + session restore.
+ * Cell: thread-navigation + identity-session + hub-action-surface + portable-governance.
  * @returns Workspace list state and mutators used by the chat shell
  */
 export function useWorkspaceData(): UseWorkspaceDataResult {
@@ -55,6 +76,7 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
   const [tools, setTools] = useState<ToolCatalogEntry[]>([]);
   const [toolAspects, setToolAspects] = useState<string[]>([]);
   const [selectedToolId, setSelectedToolId] = useState<string | null>(null);
+  const [bulletin, setBulletin] = useState<BulletinBoard | null>(null);
   const [activeId, setActiveId] = useState<string | null>(() => readActiveThreadId());
   const [title, setTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -76,6 +98,14 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
     }
   }, []);
 
+  /**
+   * Reload Mission bulletin columns from GET /api/bulletin.
+   */
+  const refreshBulletin = useCallback(async () => {
+    const board = await fetchBulletin();
+    setBulletin(board);
+  }, []);
+
   useEffect(() => {
     void fetchHealth()
       .then(setHealth)
@@ -95,10 +125,13 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
         setToolAspects(data.aspects);
       })
       .catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)));
+    void refreshBulletin().catch((err: unknown) =>
+      setError(err instanceof Error ? err.message : String(err)),
+    );
     void refreshThreads().catch((err: unknown) =>
       setError(err instanceof Error ? err.message : String(err)),
     );
-  }, [refreshThreads]);
+  }, [refreshThreads, refreshBulletin]);
 
   /**
    * Toggle/select a skill and load its body for Hub browse.
@@ -126,6 +159,60 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
    */
   function selectTool(id: string): void {
     setSelectedToolId((prev) => (prev === id ? null : id));
+  }
+
+  /**
+   * Create a Mission feature; optionally seed-bind the active thread.
+   * @param input - title/summary/ballHolderId from the Mission form
+   */
+  async function createMissionFeature(input: {
+    title: string;
+    summary?: string;
+    ballHolderId?: string | null;
+  }): Promise<void> {
+    setError(null);
+    try {
+      await createFeature({
+        ...input,
+        threadIds: activeId ? [activeId] : [],
+      });
+      await refreshBulletin();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  /**
+   * Advance a feature along the light SOP and refresh the bulletin.
+   * @param featureId - Feature id
+   * @param stage - Allowed target stage
+   */
+  async function advanceMissionFeature(featureId: string, stage: FeatureStage): Promise<void> {
+    setError(null);
+    try {
+      await advanceFeature(featureId, stage);
+      await refreshBulletin();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  /**
+   * Bind the currently selected thread to a feature (Done: feature ↔ thread).
+   * @param featureId - Feature to attach
+   */
+  async function bindMissionThread(featureId: string): Promise<void> {
+    if (!activeId) {
+      setError("Select a thread before binding");
+      return;
+    }
+    setError(null);
+    try {
+      await bindFeatureThread(featureId, activeId);
+      await refreshBulletin();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
   }
 
   /**
@@ -173,6 +260,11 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
     toolAspects,
     selectedToolId,
     selectTool,
+    bulletin,
+    refreshBulletin,
+    createMissionFeature,
+    advanceMissionFeature,
+    bindMissionThread,
     activeId,
     setActiveId,
     title,

@@ -1,5 +1,8 @@
 import type {
+  BulletinBoard,
   CatConfig,
+  Feature,
+  FeatureStage,
   HealthResponse,
   HubBlockAction,
   Message,
@@ -143,4 +146,62 @@ export async function postMessageAction(
     },
   );
   return data.message;
+}
+
+/**
+ * GET /api/bulletin — Mission Hub board projection (M15).
+ * @returns BulletinBoard columns by SOP stage
+ */
+export async function fetchBulletin(): Promise<BulletinBoard> {
+  const data = await apiJson<{ bulletin: BulletinBoard }>("/api/bulletin");
+  return data.bulletin;
+}
+
+/**
+ * POST /api/features — create a feature on the Mission board.
+ * @param input - title required; optional summary/holder/threads
+ * @returns Created Feature
+ */
+export async function createFeature(input: {
+  title: string;
+  summary?: string;
+  ballHolderId?: string | null;
+  threadIds?: string[];
+}): Promise<Feature> {
+  const data = await apiJson<{ feature: Feature }>("/api/features", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return data.feature;
+}
+
+/**
+ * POST /api/features/:id/advance — move along light SOP transitions.
+ * @param featureId - Feature id
+ * @param stage - Target stage allowed by FEATURE_STAGE_TRANSITIONS
+ * @returns Updated Feature
+ */
+export async function advanceFeature(featureId: string, stage: FeatureStage): Promise<Feature> {
+  const data = await apiJson<{ feature: Feature }>(`/api/features/${featureId}/advance`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ stage }),
+  });
+  return data.feature;
+}
+
+/**
+ * POST /api/features/:id/bind-thread — attach a thread (idempotent).
+ * @param featureId - Feature id
+ * @param threadId - Thread to bind
+ * @returns Updated Feature
+ */
+export async function bindFeatureThread(featureId: string, threadId: string): Promise<Feature> {
+  const data = await apiJson<{ feature: Feature }>(`/api/features/${featureId}/bind-thread`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ threadId }),
+  });
+  return data.feature;
 }

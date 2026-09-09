@@ -3,6 +3,7 @@ import type { HubBlockAction } from "@mac/shared";
 import { invokeMessage, postMessageAction, streamEchoMessage } from "../api/endpoints";
 import { mentionSuggestion, parseMentions } from "../chat/mention";
 import { ChatPanel } from "../components/ChatPanel";
+import { MissionBoard } from "../components/MissionBoard";
 import { SkillsPanel } from "../components/SkillsPanel";
 import { ToolsPanel } from "../components/ToolsPanel";
 import { ThreadSidebar } from "../components/ThreadSidebar";
@@ -10,7 +11,7 @@ import { useThreadSocket } from "../hooks/useThreadSocket";
 import { useWorkspaceData } from "../hooks/useWorkspaceData";
 
 /**
- * Chat shell: wires workspace data, WS bubbles, skills/tools/Hub-actions, and composer UX.
+ * Chat shell: wires workspace data, WS bubbles, Mission Hub, skills/tools/Hub-actions.
  * Composition root only — HTTP/WS/routing live in api/ + hooks/ + shared.
  */
 export function App() {
@@ -27,6 +28,10 @@ export function App() {
     toolAspects,
     selectedToolId,
     selectTool,
+    bulletin,
+    createMissionFeature,
+    advanceMissionFeature,
+    bindMissionThread,
     activeId,
     setActiveId,
     title,
@@ -43,6 +48,7 @@ export function App() {
 
   const [draft, setDraft] = useState("");
   const [actionBusy, setActionBusy] = useState(false);
+  const [missionBusy, setMissionBusy] = useState(false);
   const messagesEnd = useRef<HTMLDivElement | null>(null);
   const activeThread = threads.find((t) => t.id === activeId) ?? null;
 
@@ -120,7 +126,7 @@ export function App() {
         <p className="brand">Multi-Agent Cooperation</p>
         <h1 className="page-title">Chat</h1>
         <p className="lede tight">
-          Wave 3 — skills, MCP tools, and Hub actions (checklist / decision write-back).
+          Wave 3 — skills, MCP tools, Hub actions, and Mission bulletin (light SOP).
         </p>
         <p className="meta">
           health:{" "}
@@ -128,9 +134,43 @@ export function App() {
             ? `${health.status}/${health.store}${health.agent ? `/${health.agent}` : ""}`
             : "…"}{" "}
           · cats: {cats.length} · skills: {skills.length} · tools: {tools.length}
+          {bulletin
+            ? ` · features: ${bulletin.columns.reduce((n, c) => n + c.features.length, 0)}`
+            : ""}
         </p>
         {error ? <p className="err">{error}</p> : null}
       </header>
+
+      <MissionBoard
+        bulletin={bulletin}
+        cats={cats}
+        activeThreadId={activeId}
+        busy={missionBusy}
+        onCreate={async (input) => {
+          setMissionBusy(true);
+          try {
+            await createMissionFeature(input);
+          } finally {
+            setMissionBusy(false);
+          }
+        }}
+        onAdvance={async (id, stage) => {
+          setMissionBusy(true);
+          try {
+            await advanceMissionFeature(id, stage);
+          } finally {
+            setMissionBusy(false);
+          }
+        }}
+        onBindThread={async (id) => {
+          setMissionBusy(true);
+          try {
+            await bindMissionThread(id);
+          } finally {
+            setMissionBusy(false);
+          }
+        }}
+      />
 
       <div className="layout layout-with-skills">
         <ThreadSidebar

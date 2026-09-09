@@ -1,0 +1,16 @@
+stages:
+  - idea
+  - spec
+  - wip
+  - review
+  - done
+# Allowed transitions (portable SOP — not a full risk router).
+transitions:
+  idea: [spec]
+  spec: [wip, idea]
+  wip: [review, spec]
+  review: [done, wip]
+  done: []
+ball:
+  # Ball holder is a cat id; Hub may leave null until assigned.
+  required_from: wip
