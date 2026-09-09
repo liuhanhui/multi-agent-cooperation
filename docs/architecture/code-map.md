@@ -24,6 +24,8 @@ Structure cleanup (`chore/structure-align-cells`): keep Fastify + React; align f
 | `mcp/` | mcp-surface-governance | Canonical tool registry, MCP server, executors |
 | `http/routes-tools.ts` | mcp-surface-governance | Hub browse GET /api/tools |
 | `http/routes-callbacks.ts` | callback-auth + mcp-surface-governance | Invocation alias + tool bridge |
+| `features/` + `http/routes-features.ts` | portable-governance | FeatureStore, SOP advance, bulletin |
+| `sop/feature-lifecycle.yaml` (repo) | portable-governance | Light SOP stages (doc + reference) |
 | `cats/` | identity-session | read-only registry load |
 | `store/` | scaffold / persistence | memory + redis ports |
 | `ws/thread-hub.ts` | transport | fan-out |
@@ -34,17 +36,19 @@ Structure cleanup (`chore/structure-align-cells`): keep Fastify + React; align f
 |---|---|---|
 | `app/App.tsx` | scaffold | Shell composition only |
 | `api/` | transport (client) | fetch + ws URL helpers |
-| `hooks/useWorkspaceData.ts` | thread-navigation + identity | lists, create, default cat |
+| `hooks/useWorkspaceData.ts` | thread-navigation + identity + portable-governance | lists, create, default cat, bulletin |
 | `hooks/useThreadSocket.ts` | transport + bubble-pipeline | WS → reducer |
 | `chat/` | bubble-pipeline | reducer, avatar, mention re-export |
 | `features/session/` | thread-navigation | active thread sessionStorage |
-| `components/` | presentation | Sidebar / ChatPanel / Bubble |
+| `components/MissionBoard.tsx` | portable-governance | Mission columns + create/advance/bind |
+| `components/` | presentation | Sidebar / ChatPanel / Bubble / Skills / Tools |
 
 ## Shared (`packages/shared/src`)
 
 | Path | Role |
 |---|---|
-| `types/*` | Terminal schemas (health, cat, thread, message, events) |
+| `types/*` | Terminal schemas (health, cat, thread, message, events, feature) |
+| `types/feature.ts` | Feature / FeatureStage / BulletinBoard + SOP transitions |
 | `mention.ts` | `parseMentions` (routing authority shared with API) |
 | `index.ts` | Barrel re-exports only |
 

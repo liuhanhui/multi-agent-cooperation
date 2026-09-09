@@ -11,6 +11,7 @@ import { HandoffStore } from "./handoff/handoff-store.js";
 import type { AppDeps } from "./http/deps.js";
 import { registerCallbackRoutes } from "./http/routes-callbacks.js";
 import { registerCatRoutes } from "./http/routes-cats.js";
+import { registerFeatureRoutes } from "./http/routes-features.js";
 import { registerHandoffRoutes } from "./http/routes-handoffs.js";
 import { registerInvokeRoutes } from "./http/routes-invoke.js";
 import { registerMetaRoutes } from "./http/routes-meta.js";
@@ -18,6 +19,7 @@ import { registerSkillRoutes } from "./http/routes-skills.js";
 import { registerThreadRoutes } from "./http/routes-threads.js";
 import { registerToolRoutes } from "./http/routes-tools.js";
 import { registerWsRoutes } from "./http/routes-ws.js";
+import { FeatureStore } from "./features/feature-store.js";
 import { ToolRegistry } from "./mcp/tool-registry.js";
 import {
   loadSkillRegistry,
@@ -47,6 +49,10 @@ export interface AppOptions {
   tools?: ToolRegistry;
   /** Disable canonical tools (rare; tests). */
   disableTools?: boolean;
+  /** Optional FeatureStore (tests). */
+  features?: FeatureStore;
+  /** Disable Mission Hub features (rare; tests). */
+  disableFeatures?: boolean;
 }
 
 /**
@@ -80,6 +86,9 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   const tools =
     opts.tools ??
     (opts.disableTools ? undefined : new ToolRegistry({ store: opts.store, hub }));
+
+  const featureStore =
+    opts.features ?? (opts.disableFeatures ? undefined : new FeatureStore());
 
   const dispatcher = opts.agent
     ? new InvocationDispatcher({
@@ -119,6 +128,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     publicBaseUrl,
     skills,
     tools,
+    features: featureStore,
   };
 
   // Restart safety: pending/streaming bubbles → failed(orphan-recovered).
@@ -136,6 +146,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   registerCallbackRoutes(app, deps);
   registerSkillRoutes(app, deps);
   registerToolRoutes(app, deps);
+  registerFeatureRoutes(app, deps);
   registerWsRoutes(app, deps);
 
   return app;

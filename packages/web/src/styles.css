@@ -26,7 +26,7 @@ body {
 }
 
 .shell {
-  max-width: 72rem;
+  max-width: 88rem;
   margin: 0 auto;
   padding: 1.5rem 1.25rem 2rem;
 }
@@ -480,4 +480,111 @@ button.ghost {
 
 .tight {
   margin: 0;
+}
+
+.mission-board {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  padding: 0.85rem;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.mission-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.mission-head h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.mission-create {
+  flex: 1 1 28rem;
+  flex-wrap: wrap;
+}
+
+.mission-create input,
+.mission-create select {
+  flex: 1 1 8rem;
+  min-width: 7rem;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  padding: 0.45rem 0.55rem;
+}
+
+.mission-columns {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.55rem;
+  overflow-x: auto;
+}
+
+@media (max-width: 960px) {
+  .mission-columns {
+    grid-template-columns: repeat(5, minmax(9.5rem, 1fr));
+  }
+}
+
+.mission-column {
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.18);
+  padding: 0.5rem;
+  min-height: 6rem;
+}
+
+.mission-stage {
+  margin: 0 0 0.45rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.mission-empty {
+  font-size: 0.85rem;
+}
+
+.mission-cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.mission-card {
+  border: 1px solid var(--line);
+  background: rgba(12, 18, 28, 0.35);
+  padding: 0.45rem 0.5rem;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.mission-card-title {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.mission-card-meta {
+  font-size: 0.72rem;
+}
+
+.mission-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.mission-card-actions .ghost {
+  padding: 0.25rem 0.4rem;
+  font-size: 0.72rem;
 }
