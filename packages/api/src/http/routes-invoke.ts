@@ -1,5 +1,9 @@
 import type { FastifyInstance } from "fastify";
-import type { MentionRoutingStrategy, SkillMatchResult } from "@mac/shared";
+import {
+  formatBlocksForPrompt,
+  type MentionRoutingStrategy,
+  type SkillMatchResult,
+} from "@mac/shared";
 import { resolveMentionRoute } from "../routing/resolve-route.js";
 import { resolveSkillInjection } from "../skills/match-skills.js";
 import { chunkText } from "./chunk-text.js";
@@ -68,6 +72,10 @@ export function registerInvokeRoutes(app: FastifyInstance, deps: AppDeps): void 
       skillInjection = resolved.injection;
     }
 
+    // M14: prior Hub checklist/decision state must be visible to the next cat turn.
+    const history = await store.listMessages(thread.id);
+    const hubActionsInjection = formatBlocksForPrompt(history);
+
     const { entry, started } = dispatcher.enqueue({
       threadId: thread.id,
       prompt: route.prompt,
@@ -79,10 +87,10 @@ export function registerInvokeRoutes(app: FastifyInstance, deps: AppDeps): void 
         const base =
           (route.catIds.length === 1 ? req.body?.systemSnippet : undefined) ??
           cats?.get(catId)?.systemSnippet;
-        // Skills match the routed prompt once per invoke; same appendix for every serial cat.
-        const skillBlock = skillInjection;
-        if (base && skillBlock) return `${base}\n\n${skillBlock}`;
-        return skillBlock || base;
+        const parts = [base, skillInjection, hubActionsInjection].filter(
+          (p): p is string => Boolean(p && p.trim()),
+        );
+        return parts.length > 0 ? parts.join("\n\n") : undefined;
       },
     });
 

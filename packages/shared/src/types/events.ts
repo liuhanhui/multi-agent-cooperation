@@ -20,6 +20,7 @@ export type PlatformEvent =
     }
   | { type: "message.completed"; message: Message }
   | { type: "message.failed"; message: Message; error: string }
+  | { type: "message.updated"; message: Message }
   | {
       /** Live CLI/agent status for Hub while a bubble is pending/streaming (M13+ UX). */
       type: "message.progress";
