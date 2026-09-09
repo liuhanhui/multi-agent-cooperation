@@ -39,8 +39,13 @@ export interface RunRoutedInvocationParams {
   hub: ThreadHub;
   agent: AgentProvider;
   threadId: string;
-  /** Prompt after mentions stripped (same text for every serial target). */
+  /** Operator-visible text stored on the user bubble (mentions already stripped). */
   prompt: string;
+  /**
+   * Text sent to the CLI agent. Defaults to `prompt`.
+   * Use for Evidence (or other) scaffolding that must not appear in Hub history.
+   */
+  agentPrompt?: string;
   /** Ordered cat ids to invoke; serial = await each turn before the next. */
   catIds: string[];
   /** Lookup systemSnippet per cat for the provider invoke. */
@@ -331,6 +336,8 @@ export async function runRoutedInvocation(
     awaitCompletion = false,
     onTurn,
   } = params;
+  // CLI sees agentPrompt; Hub bubble keeps the short operator prompt.
+  const agentPrompt = params.agentPrompt ?? prompt;
 
   if (catIds.length === 0) {
     throw new Error("runRoutedInvocation requires at least one catId");
@@ -358,7 +365,7 @@ export async function runRoutedInvocation(
         hub,
         agent,
         threadId,
-        prompt,
+        prompt: agentPrompt,
         assistantAuthorId: catId,
         systemSnippet: systemSnippetFor(catId),
         cwd,
@@ -422,7 +429,7 @@ export async function runRoutedInvocation(
       hub,
       agent,
       threadId,
-      prompt,
+      prompt: agentPrompt,
       assistantMessage: firstAssistant,
       systemSnippet: systemSnippetFor(firstCatId),
       cwd,
@@ -458,7 +465,7 @@ export async function runRoutedInvocation(
         hub,
         agent,
         threadId,
-        prompt,
+        prompt: agentPrompt,
         assistantAuthorId: catId,
         systemSnippet: systemSnippetFor(catId),
         cwd,

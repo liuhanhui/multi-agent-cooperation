@@ -11,6 +11,7 @@ import {
   prependSystemSnippet,
   prepareSpawnArgs,
   quoteWinShellArg,
+  resolveWinExecutable,
   shouldUseWinShell,
 } from "./cli-line-stream.js";
 import { parseCodexLine } from "./codex-stream-parse.js";
@@ -118,6 +119,18 @@ test("shouldUseWinShell is false for absolute exe paths", () => {
   assert.equal(shouldUseWinShell("agy"), true);
   assert.equal(shouldUseWinShell("C:\\Users\\x\\agy.exe"), false);
   assert.equal(shouldUseWinShell("C:/tools/agy.exe"), false);
+});
+
+test("resolveWinExecutable prefers .exe from where.exe on win32", () => {
+  if (process.platform !== "win32") {
+    assert.equal(resolveWinExecutable("node"), "node");
+    return;
+  }
+  const resolved = resolveWinExecutable("node");
+  assert.match(resolved, /\.exe$/i);
+  assert.equal(shouldUseWinShell(resolved), false);
+  // Already absolute exe stays unchanged.
+  assert.equal(resolveWinExecutable(resolved), resolved);
 });
 
 test("fake provider yields deltas then completed", async () => {

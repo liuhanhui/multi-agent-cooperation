@@ -3,6 +3,7 @@ import type { HubBlockAction } from "@mac/shared";
 import { invokeMessage, postMessageAction, streamEchoMessage } from "../api/endpoints";
 import { mentionSuggestion, parseMentions } from "../chat/mention";
 import { ChatPanel } from "../components/ChatPanel";
+import { EvidencePanel } from "../components/EvidencePanel";
 import { MissionBoard } from "../components/MissionBoard";
 import { SkillsPanel } from "../components/SkillsPanel";
 import { ToolsPanel } from "../components/ToolsPanel";
@@ -32,6 +33,11 @@ export function App() {
     createMissionFeature,
     advanceMissionFeature,
     bindMissionThread,
+    evidenceList,
+    evidenceSearchHits,
+    refreshEvidence,
+    searchEvidenceCue,
+    writeEvidence,
     activeId,
     setActiveId,
     title,
@@ -49,6 +55,7 @@ export function App() {
   const [draft, setDraft] = useState("");
   const [actionBusy, setActionBusy] = useState(false);
   const [missionBusy, setMissionBusy] = useState(false);
+  const [evidenceBusy, setEvidenceBusy] = useState(false);
   const messagesEnd = useRef<HTMLDivElement | null>(null);
   const activeThread = threads.find((t) => t.id === activeId) ?? null;
 
@@ -126,7 +133,7 @@ export function App() {
         <p className="brand">Multi-Agent Cooperation</p>
         <h1 className="page-title">Chat</h1>
         <p className="lede tight">
-          Wave 3 — skills, MCP tools, Hub actions, and Mission bulletin (light SOP).
+          Wave 4 — evidence memory (BM25) injects into invoke; Mission + skills + tools remain.
         </p>
         <p className="meta">
           health:{" "}
@@ -137,6 +144,7 @@ export function App() {
           {bulletin
             ? ` · features: ${bulletin.columns.reduce((n, c) => n + c.features.length, 0)}`
             : ""}
+          {` · evidence: ${evidenceList.length}`}
         </p>
         {error ? <p className="err">{error}</p> : null}
       </header>
@@ -206,6 +214,35 @@ export function App() {
         )}
 
         <div className="catalog-rail">
+          <EvidencePanel
+            evidence={evidenceList}
+            searchHits={evidenceSearchHits}
+            busy={evidenceBusy}
+            onRefresh={async () => {
+              setEvidenceBusy(true);
+              try {
+                await refreshEvidence();
+              } finally {
+                setEvidenceBusy(false);
+              }
+            }}
+            onSearch={async (q) => {
+              setEvidenceBusy(true);
+              try {
+                await searchEvidenceCue(q);
+              } finally {
+                setEvidenceBusy(false);
+              }
+            }}
+            onCreate={async (input) => {
+              setEvidenceBusy(true);
+              try {
+                await writeEvidence(input);
+              } finally {
+                setEvidenceBusy(false);
+              }
+            }}
+          />
           <SkillsPanel
             skills={skills}
             tokenBudget={skillsBudget}

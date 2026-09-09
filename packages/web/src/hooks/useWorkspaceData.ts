@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import type {
   BulletinBoard,
   CatConfig,
+  Evidence,
+  EvidenceHit,
   FeatureStage,
   HealthResponse,
   SkillSummary,
@@ -11,16 +13,19 @@ import type {
 import {
   advanceFeature,
   bindFeatureThread,
+  createEvidence,
   createFeature,
   createThread as createThreadRequest,
   fetchBulletin,
   fetchCats,
+  fetchEvidenceList,
   fetchHealth,
   fetchSkill,
   fetchSkills,
   fetchThreads,
   fetchTools,
   patchThreadMembers,
+  searchEvidence,
 } from "../api/endpoints";
 import {
   readActiveThreadId,
@@ -49,6 +54,16 @@ export interface UseWorkspaceDataResult {
   }) => Promise<void>;
   advanceMissionFeature: (featureId: string, stage: FeatureStage) => Promise<void>;
   bindMissionThread: (featureId: string) => Promise<void>;
+  evidenceList: Evidence[];
+  evidenceSearchHits: EvidenceHit[] | null;
+  refreshEvidence: () => Promise<void>;
+  searchEvidenceCue: (q: string) => Promise<void>;
+  writeEvidence: (input: {
+    title: string;
+    body: string;
+    tags?: string[];
+    provenance: { source: string; actorId?: string };
+  }) => Promise<void>;
   activeId: string | null;
   setActiveId: (id: string | null) => void;
   title: string;
@@ -61,8 +76,8 @@ export interface UseWorkspaceDataResult {
 }
 
 /**
- * Load health/cats/threads/skills/tools/bulletin and own sidebar selection + session restore.
- * Cell: thread-navigation + identity-session + hub-action-surface + portable-governance.
+ * Load health/cats/threads/skills/tools/bulletin/evidence and own sidebar selection.
+ * Cell: thread-navigation + identity-session + hub-action-surface + portable-governance + memory.
  * @returns Workspace list state and mutators used by the chat shell
  */
 export function useWorkspaceData(): UseWorkspaceDataResult {
@@ -77,6 +92,8 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
   const [toolAspects, setToolAspects] = useState<string[]>([]);
   const [selectedToolId, setSelectedToolId] = useState<string | null>(null);
   const [bulletin, setBulletin] = useState<BulletinBoard | null>(null);
+  const [evidenceList, setEvidenceList] = useState<Evidence[]>([]);
+  const [evidenceSearchHits, setEvidenceSearchHits] = useState<EvidenceHit[] | null>(null);
   const [activeId, setActiveId] = useState<string | null>(() => readActiveThreadId());
   const [title, setTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -106,6 +123,15 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
     setBulletin(board);
   }, []);
 
+  /**
+   * Reload evidence list and clear search mode.
+   */
+  const refreshEvidence = useCallback(async () => {
+    const list = await fetchEvidenceList();
+    setEvidenceList(list);
+    setEvidenceSearchHits(null);
+  }, []);
+
   useEffect(() => {
     void fetchHealth()
       .then(setHealth)
@@ -128,10 +154,13 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
     void refreshBulletin().catch((err: unknown) =>
       setError(err instanceof Error ? err.message : String(err)),
     );
+    void refreshEvidence().catch((err: unknown) =>
+      setError(err instanceof Error ? err.message : String(err)),
+    );
     void refreshThreads().catch((err: unknown) =>
       setError(err instanceof Error ? err.message : String(err)),
     );
-  }, [refreshThreads, refreshBulletin]);
+  }, [refreshThreads, refreshBulletin, refreshEvidence]);
 
   /**
    * Toggle/select a skill and load its body for Hub browse.
@@ -216,6 +245,50 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
   }
 
   /**
+   * BM25 search; empty query falls back to list.
+   * @param q - Cue text
+   */
+  async function searchEvidenceCue(q: string): Promise<void> {
+    const trimmed = q.trim();
+    if (!trimmed) {
+      await refreshEvidence();
+      return;
+    }
+    setError(null);
+    try {
+      const hits = await searchEvidence(trimmed);
+      setEvidenceSearchHits(hits);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  /**
+   * Write evidence with forced provenance; refresh list after.
+   * @param input - Create payload
+   */
+  async function writeEvidence(input: {
+    title: string;
+    body: string;
+    tags?: string[];
+    provenance: { source: string; actorId?: string };
+  }): Promise<void> {
+    setError(null);
+    try {
+      await createEvidence({
+        ...input,
+        provenance: {
+          ...input.provenance,
+          threadId: activeId ?? undefined,
+        },
+      });
+      await refreshEvidence();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  /**
    * Create a thread from the sidebar title field and select it.
    */
   async function createThread(): Promise<void> {
@@ -265,6 +338,11 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
     createMissionFeature,
     advanceMissionFeature,
     bindMissionThread,
+    evidenceList,
+    evidenceSearchHits,
+    refreshEvidence,
+    searchEvidenceCue,
+    writeEvidence,
     activeId,
     setActiveId,
     title,

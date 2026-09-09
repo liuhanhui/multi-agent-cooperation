@@ -4,6 +4,7 @@ import type { CatRegistry } from "../cats/load-cat-config.js";
 import type { InvocationDispatcher } from "../dispatch/dispatcher.js";
 import type { FeatureStore } from "../features/feature-store.js";
 import type { HandoffService } from "../handoff/handoff-service.js";
+import type { EvidenceStore } from "../memory/evidence-store.js";
 import type { ToolRegistry } from "../mcp/tool-registry.js";
 import type { SkillRegistry } from "../skills/skill-registry.js";
 import type { MacStore } from "../store/types.js";
@@ -34,4 +35,6 @@ export interface AppDeps {
   tools?: ToolRegistry;
   /** M15 Mission Hub feature store + bulletin. */
   features?: FeatureStore;
+  /** M16 SQLite evidence store + BM25 retrieval. */
+  evidence?: EvidenceStore;
 }

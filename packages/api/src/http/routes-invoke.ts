@@ -4,6 +4,7 @@ import {
   type MentionRoutingStrategy,
   type SkillMatchResult,
 } from "@mac/shared";
+import { retrieveEvidenceForPrompt } from "../memory/retrieve-evidence.js";
 import { resolveMentionRoute } from "../routing/resolve-route.js";
 import { resolveSkillInjection } from "../skills/match-skills.js";
 import { chunkText } from "./chunk-text.js";
@@ -15,7 +16,7 @@ import type { AppDeps } from "./deps.js";
  * @param deps - store/hub/agent/cats/dispatcher
  */
 export function registerInvokeRoutes(app: FastifyInstance, deps: AppDeps): void {
-  const { store, hub, agent, cats, dispatcher, skills } = deps;
+  const { store, hub, agent, cats, dispatcher, skills, evidence } = deps;
 
   /**
    * Resolve @mention route, then enqueue on InvocationDispatcher (M08).
@@ -76,9 +77,29 @@ export function registerInvokeRoutes(app: FastifyInstance, deps: AppDeps): void 
     const history = await store.listMessages(thread.id);
     const hubActionsInjection = formatBlocksForPrompt(history);
 
+    // M16: BM25 evidence retrieval — empty injection when no hits (do not invent memory).
+    // Put the block on the CLI user prompt (`-p`), not only --append-system-prompt:
+    // coding agents often tool-search the repo and miss system appends.
+    const evidenceRetrieval = evidence
+      ? retrieveEvidenceForPrompt(evidence, route.prompt)
+      : undefined;
+    const evidenceInjection = evidenceRetrieval?.injection ?? "";
+    const invokePrompt = evidenceInjection
+      ? [
+          evidenceInjection,
+          "",
+          "---",
+          "Answer from the Hub Evidence block above when it is relevant.",
+          "Do not search the repo or invent memory for these facts; if Evidence is missing, say you lack Hub evidence.",
+          "",
+          `[Operator]\n${route.prompt}`,
+        ].join("\n")
+      : route.prompt;
+
     const { entry, started } = dispatcher.enqueue({
       threadId: thread.id,
       prompt: route.prompt,
+      agentPrompt: invokePrompt,
       catIds: route.catIds,
       authorId: req.body?.authorId ?? "operator",
       priority: req.body?.priority,
@@ -87,6 +108,7 @@ export function registerInvokeRoutes(app: FastifyInstance, deps: AppDeps): void 
         const base =
           (route.catIds.length === 1 ? req.body?.systemSnippet : undefined) ??
           cats?.get(catId)?.systemSnippet;
+        // Evidence lives on agentPrompt; keep skills + Hub actions on system.
         const parts = [base, skillInjection, hubActionsInjection].filter(
           (p): p is string => Boolean(p && p.trim()),
         );
@@ -114,6 +136,12 @@ export function registerInvokeRoutes(app: FastifyInstance, deps: AppDeps): void 
       skillsSkipped: skillMatch?.skipped ?? [],
       skillsTokens: skillMatch
         ? { used: skillMatch.totalTokens, budget: skillMatch.budgetTokens }
+        : null,
+      // M16: evidence ids injected (empty when no BM25 hit).
+      evidenceInjected: evidenceRetrieval?.injectedIds ?? [],
+      evidenceSkipped: evidenceRetrieval?.skipped ?? [],
+      evidenceTokens: evidenceRetrieval
+        ? { used: evidenceRetrieval.totalTokens, budget: evidenceRetrieval.budgetTokens }
         : null,
     });
   });

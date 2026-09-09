@@ -76,4 +76,10 @@ export {
   type Feature,
   type FeatureStage,
 } from "./types/feature.js";
+export type {
+  Evidence,
+  EvidenceHit,
+  EvidenceProvenance,
+  EvidenceRetrievalResult,
+} from "./types/evidence.js";
 

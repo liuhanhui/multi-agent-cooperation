@@ -11,6 +11,7 @@ import { HandoffStore } from "./handoff/handoff-store.js";
 import type { AppDeps } from "./http/deps.js";
 import { registerCallbackRoutes } from "./http/routes-callbacks.js";
 import { registerCatRoutes } from "./http/routes-cats.js";
+import { registerEvidenceRoutes } from "./http/routes-evidence.js";
 import { registerFeatureRoutes } from "./http/routes-features.js";
 import { registerHandoffRoutes } from "./http/routes-handoffs.js";
 import { registerInvokeRoutes } from "./http/routes-invoke.js";
@@ -20,6 +21,7 @@ import { registerThreadRoutes } from "./http/routes-threads.js";
 import { registerToolRoutes } from "./http/routes-tools.js";
 import { registerWsRoutes } from "./http/routes-ws.js";
 import { FeatureStore } from "./features/feature-store.js";
+import { EvidenceStore } from "./memory/evidence-store.js";
 import { ToolRegistry } from "./mcp/tool-registry.js";
 import {
   loadSkillRegistry,
@@ -53,6 +55,12 @@ export interface AppOptions {
   features?: FeatureStore;
   /** Disable Mission Hub features (rare; tests). */
   disableFeatures?: boolean;
+  /** Optional EvidenceStore (tests often pass `:memory:`). */
+  evidence?: EvidenceStore;
+  /** Evidence SQLite path override (ignored when `evidence` is provided). */
+  evidenceDbPath?: string;
+  /** Disable evidence memory (rare; tests). */
+  disableEvidence?: boolean;
 }
 
 /**
@@ -89,6 +97,15 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
 
   const featureStore =
     opts.features ?? (opts.disableFeatures ? undefined : new FeatureStore());
+
+  const evidenceStore =
+    opts.evidence ??
+    (opts.disableEvidence
+      ? undefined
+      : new EvidenceStore({
+          // Tests omit path → in-memory. Production `index.ts` passes a durable path.
+          dbPath: opts.evidenceDbPath ?? process.env.MAC_EVIDENCE_DB ?? ":memory:",
+        }));
 
   const dispatcher = opts.agent
     ? new InvocationDispatcher({
@@ -129,6 +146,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     skills,
     tools,
     features: featureStore,
+    evidence: evidenceStore,
   };
 
   // Restart safety: pending/streaming bubbles → failed(orphan-recovered).
@@ -147,6 +165,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   registerSkillRoutes(app, deps);
   registerToolRoutes(app, deps);
   registerFeatureRoutes(app, deps);
+  registerEvidenceRoutes(app, deps);
   registerWsRoutes(app, deps);
 
   return app;

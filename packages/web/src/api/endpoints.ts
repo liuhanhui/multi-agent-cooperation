@@ -1,6 +1,8 @@
 import type {
   BulletinBoard,
   CatConfig,
+  Evidence,
+  EvidenceHit,
   Feature,
   FeatureStage,
   HealthResponse,
@@ -204,4 +206,44 @@ export async function bindFeatureThread(featureId: string, threadId: string): Pr
     body: JSON.stringify({ threadId }),
   });
   return data.feature;
+}
+
+/**
+ * GET /api/evidence — Hub browse list (M16).
+ * @returns Evidence rows newest-first
+ */
+export async function fetchEvidenceList(): Promise<Evidence[]> {
+  const data = await apiJson<{ evidence: Evidence[] }>("/api/evidence");
+  return data.evidence;
+}
+
+/**
+ * GET /api/evidence/search — BM25 search.
+ * @param q - Free-text query
+ * @returns Hits with scores
+ */
+export async function searchEvidence(q: string): Promise<EvidenceHit[]> {
+  const data = await apiJson<{ hits: EvidenceHit[] }>(
+    `/api/evidence/search?q=${encodeURIComponent(q)}`,
+  );
+  return data.hits;
+}
+
+/**
+ * POST /api/evidence — write a provenance-tagged evidence row.
+ * @param input - title/body/tags + required provenance.source
+ * @returns Created Evidence
+ */
+export async function createEvidence(input: {
+  title: string;
+  body: string;
+  tags?: string[];
+  provenance: { source: string; recordedAt?: string; actorId?: string; threadId?: string };
+}): Promise<Evidence> {
+  const data = await apiJson<{ evidence: Evidence }>("/api/evidence", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return data.evidence;
 }

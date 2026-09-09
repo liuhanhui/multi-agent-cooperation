@@ -8,6 +8,7 @@ import { createProviderRouter } from "./agents/provider-router.js";
 import type { AgentProvider } from "./agents/types.js";
 import { loadCatRegistry, type CatRegistry } from "./cats/load-cat-config.js";
 import { buildApp } from "./create-app.js";
+import { resolveEvidenceDbPath } from "./memory/evidence-store.js";
 import { createStore } from "./store/create-store.js";
 
 /**
@@ -86,7 +87,15 @@ const storeKind = (process.env.MAC_STORE ?? "memory") === "redis" ? "redis" : "m
 const store = await createStore(storeKind);
 const cats = loadCatRegistry();
 const agent = createAgent(cats);
-const app = await buildApp({ store, storeKind, agent, cats, version: "0.0.1" });
+const app = await buildApp({
+  store,
+  storeKind,
+  agent,
+  cats,
+  version: "0.0.1",
+  // Durable evidence DB (Iron Laws: never unlink this file from tooling).
+  evidenceDbPath: resolveEvidenceDbPath(),
+});
 
 await app.listen({ port, host: "127.0.0.1" });
 console.log(

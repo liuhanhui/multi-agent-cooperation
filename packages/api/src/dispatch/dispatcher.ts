@@ -9,7 +9,13 @@ import { TurnExecutionStore } from "./turn-execution-store.js";
 
 export interface EnqueueInvocationInput {
   threadId: string;
+  /** Operator-visible prompt stored on the user bubble / QueueEntry. */
   prompt: string;
+  /**
+   * Optional prompt sent to the CLI agent (e.g. Evidence-prepended).
+   * Defaults to `prompt` so Hub UI never shows injection scaffolding.
+   */
+  agentPrompt?: string;
   catIds: string[];
   authorId?: string;
   priority?: number;
@@ -63,6 +69,8 @@ export class InvocationDispatcher {
     string,
     (catId: string) => string | undefined
   >();
+  /** Per-entry CLI prompt when it differs from the Hub-visible operator prompt (M16). */
+  private readonly agentPrompts = new Map<string, string>();
   private readonly autoReviews = new Map<string, { toCatId: string }>();
   /** One-shot callback credentials minted when an entry starts. */
   private readonly entryCredentials = new Map<string, InvocationCredential>();
@@ -101,6 +109,9 @@ export class InvocationDispatcher {
     };
     this.deps.executions.putEntry(entry);
     this.snippetResolvers.set(entry.id, input.systemSnippetFor);
+    if (input.agentPrompt && input.agentPrompt !== input.prompt) {
+      this.agentPrompts.set(entry.id, input.agentPrompt);
+    }
     if (input.autoReview) {
       this.autoReviews.set(entry.id, input.autoReview);
     }
@@ -138,6 +149,7 @@ export class InvocationDispatcher {
         updatedAt: now,
       });
       this.snippetResolvers.delete(queueEntryId);
+      this.agentPrompts.delete(queueEntryId);
       void this.pump();
       return this.deps.executions.getEntry(queueEntryId)!;
     }
@@ -265,6 +277,7 @@ export class InvocationDispatcher {
 
     const systemSnippetFor =
       this.snippetResolvers.get(entryId) ?? ((_catId: string) => undefined);
+    const agentPrompt = this.agentPrompts.get(entryId) ?? entry.prompt;
     const credential = this.entryCredentials.get(entryId);
     const base = this.deps.publicBaseUrl?.replace(/\/$/, "") ?? "";
 
@@ -275,6 +288,7 @@ export class InvocationDispatcher {
         agent: this.deps.agent,
         threadId: entry.threadId,
         prompt: entry.prompt,
+        agentPrompt,
         catIds: entry.catIds,
         authorId: entry.authorId,
         systemSnippetFor,
@@ -307,6 +321,7 @@ export class InvocationDispatcher {
     } finally {
       this.liveCancels.delete(entryId);
       this.snippetResolvers.delete(entryId);
+      this.agentPrompts.delete(entryId);
       this.autoReviews.delete(entryId);
       this.entryCredentials.delete(entryId);
       this.inFlight.delete(entryId);
