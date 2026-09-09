@@ -26,6 +26,7 @@ Structure cleanup (`chore/structure-align-cells`): keep Fastify + React; align f
 | `http/routes-callbacks.ts` | callback-auth + mcp-surface-governance | Invocation alias + tool bridge |
 | `features/` + `http/routes-features.ts` | portable-governance | FeatureStore, SOP advance, bulletin |
 | `sop/feature-lifecycle.yaml` (repo) | portable-governance | Light SOP stages (doc + reference) |
+| `memory/` + `http/routes-evidence.ts` | memory | EvidenceStore (SQLite FTS5), retrieve + inject |
 | `cats/` | identity-session | read-only registry load |
 | `store/` | scaffold / persistence | memory + redis ports |
 | `ws/thread-hub.ts` | transport | fan-out |
@@ -36,19 +37,21 @@ Structure cleanup (`chore/structure-align-cells`): keep Fastify + React; align f
 |---|---|---|
 | `app/App.tsx` | scaffold | Shell composition only |
 | `api/` | transport (client) | fetch + ws URL helpers |
-| `hooks/useWorkspaceData.ts` | thread-navigation + identity + portable-governance | lists, create, default cat, bulletin |
+| `hooks/useWorkspaceData.ts` | thread-navigation + identity + portable-governance + memory | lists, bulletin, evidence |
 | `hooks/useThreadSocket.ts` | transport + bubble-pipeline | WS → reducer |
 | `chat/` | bubble-pipeline | reducer, avatar, mention re-export |
 | `features/session/` | thread-navigation | active thread sessionStorage |
 | `components/MissionBoard.tsx` | portable-governance | Mission columns + create/advance/bind |
+| `components/EvidencePanel.tsx` | memory | Evidence write / BM25 search |
 | `components/` | presentation | Sidebar / ChatPanel / Bubble / Skills / Tools |
 
 ## Shared (`packages/shared/src`)
 
 | Path | Role |
 |---|---|
-| `types/*` | Terminal schemas (health, cat, thread, message, events, feature) |
+| `types/*` | Terminal schemas (health, cat, thread, message, events, feature, evidence) |
 | `types/feature.ts` | Feature / FeatureStage / BulletinBoard + SOP transitions |
+| `types/evidence.ts` | Evidence + provenance + retrieval result shapes |
 | `mention.ts` | `parseMentions` (routing authority shared with API) |
 | `index.ts` | Barrel re-exports only |
 

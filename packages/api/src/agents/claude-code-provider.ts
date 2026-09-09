@@ -6,7 +6,12 @@ import {
   extractClaudeDelta,
   extractClaudeResultText,
 } from "./claude-stream-parse.js";
-import { prepareSpawnArgs, quoteWinShellArg, shouldUseWinShell } from "./cli-line-stream.js";
+import {
+  prepareSpawnArgs,
+  quoteWinShellArg,
+  resolveWinExecutable,
+  shouldUseWinShell,
+} from "./cli-line-stream.js";
 
 export interface ClaudeCodeProviderOptions {
   /** Executable name or path. Default: claude */
@@ -20,7 +25,9 @@ export interface ClaudeCodeProviderOptions {
 }
 
 export function createClaudeCodeProvider(opts: ClaudeCodeProviderOptions = {}): AgentProvider {
-  const command = opts.command ?? process.env.MAC_CLAUDE_COMMAND ?? "claude";
+  const command = resolveWinExecutable(
+    opts.command ?? process.env.MAC_CLAUDE_COMMAND ?? "claude",
+  );
   const defaultCwd = opts.cwd ?? process.env.MAC_AGENT_CWD ?? process.cwd();
   const permissionMode =
     opts.permissionMode ?? process.env.MAC_CLAUDE_PERMISSION_MODE ?? "dontAsk";
@@ -45,7 +52,7 @@ export function createClaudeCodeProvider(opts: ClaudeCodeProviderOptions = {}): 
         args.push("--append-system-prompt", input.systemSnippet);
       }
 
-      // Same Windows shell policy as runCliNdjson (argv for .exe; shell for .cmd shims).
+      // Resolve bare `claude` → .exe so multiline Evidence prompts survive on Windows.
       const useShell = shouldUseWinShell(command);
       const child = spawn(
         useShell ? quoteWinShellArg(command) : command,

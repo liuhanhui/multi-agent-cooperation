@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { createInterface } from "node:readline";
 import type { AgentStreamEvent } from "./types.js";
 
@@ -68,6 +68,32 @@ export function shouldUseWinShell(command: string): boolean {
 }
 
 /**
+ * On Windows, resolve a bare CLI name to a real `.exe` via `where.exe` so spawn can
+ * skip `shell: true` (required for multiline `-p` / Evidence injection).
+ * @param command - Executable name or path
+ * @returns Absolute `.exe` path when found; otherwise the original command
+ */
+export function resolveWinExecutable(command: string): string {
+  if (process.platform !== "win32") return command;
+  if (/[\\/]/.test(command) || /\.exe$/i.test(command)) return command;
+  try {
+    const out = execFileSync("where.exe", [command], {
+      encoding: "utf8",
+      windowsHide: true,
+    });
+    const lines = out
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+    const exe = lines.find((line) => /\.exe$/i.test(line));
+    if (exe) return exe;
+  } catch {
+    // Keep bare name; caller may still use shell shim.
+  }
+  return command;
+}
+
+/**
  * Basename for Hub progress labels (hide long Windows paths).
  * @param command - Executable path or name
  * @returns Short label (e.g. agy.exe)
@@ -87,7 +113,8 @@ export function shortCommandLabel(command: string): string {
 export async function* runCliNdjson(
   params: RunCliNdjsonParams,
 ): AsyncIterable<AgentStreamEvent> {
-  const { command, args, cwd, timeoutMs, signal, processLabel, parseLine } = params;
+  const { args, cwd, timeoutMs, signal, processLabel, parseLine } = params;
+  const command = resolveWinExecutable(params.command);
   const label = shortCommandLabel(command);
 
   yield {
@@ -183,7 +210,7 @@ export async function* runCliNdjson(
       if (!sawStdout && !failed) {
         const hint = stderr.trim().split(/\r?\n/).filter(Boolean).at(-1)?.slice(0, 160);
         if (hint) {
-          push({
+          push({ 
             type: "progress",
             phase: "waiting",
             detail: `${processLabel} stderr: ${hint}`,
