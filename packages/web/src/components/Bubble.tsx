@@ -1,10 +1,14 @@
 import { useEffect, useState } from "react";
-import type { CatConfig, Message } from "@mac/shared";
+import type { CatConfig, HubBlockAction, Message } from "@mac/shared";
 import { avatarInitials, avatarTone } from "../chat/avatar";
+import { ContentBlocks } from "./ContentBlocks";
 
 interface BubbleProps {
   message: Message;
   cats: CatConfig[];
+  /** Hub action handler for interactive blocks on this message. */
+  onBlockAction?: (messageId: string, action: HubBlockAction) => void;
+  actionBusy?: boolean;
 }
 
 /**
@@ -19,11 +23,13 @@ function formatElapsed(totalSeconds: number): string {
 }
 
 /**
- * One chat bubble with avatar, status, optional live CLI progress, and body.
- * @param props.message - Bubble from the reducer (may include progress while running)
+ * One chat bubble with avatar, status, optional live CLI progress, body, and rich blocks.
+ * @param props.message - Bubble from the reducer (may include progress/blocks)
  * @param props.cats - Registry for display names / tones
+ * @param props.onBlockAction - Optional checklist/decision write-back
+ * @param props.actionBusy - Disable block controls while posting an action
  */
-export function Bubble({ message, cats }: BubbleProps) {
+export function Bubble({ message, cats, onBlockAction, actionBusy }: BubbleProps) {
   const cat = cats.find((c) => c.id === message.authorId);
   const label = cat?.displayName ?? message.authorId;
   const tone = avatarTone(message.authorId);
@@ -59,6 +65,10 @@ export function Bubble({ message, cats }: BubbleProps) {
         ? message.progress
         : null;
 
+  const interactive =
+    message.status === "completed" &&
+    Boolean(message.blocks?.some((b) => b.type === "checklist" || b.type === "decision"));
+
   return (
     <article className={`bubble ${message.role}`} data-message-id={message.id}>
       <div className="bubble-row">
@@ -82,13 +92,21 @@ export function Bubble({ message, cats }: BubbleProps) {
           {body || message.status === "streaming" ? (
             <p>
               {body}
-              {message.status === "streaming" && message.content ? (
-                <span className="stream-caret" aria-hidden="true" />
-              ) : null}
-              {message.status === "streaming" && !message.content ? (
+              {message.status === "streaming" ? (
                 <span className="stream-caret" aria-hidden="true" />
               ) : null}
             </p>
+          ) : null}
+          {message.blocks && message.blocks.length > 0 ? (
+            <ContentBlocks
+              blocks={message.blocks}
+              disabled={actionBusy || !interactive}
+              onAction={
+                interactive && onBlockAction
+                  ? (action) => onBlockAction(message.id, action)
+                  : undefined
+              }
+            />
           ) : null}
         </div>
       </div>

@@ -50,4 +50,22 @@ export type {
   ToolCatalogEntry,
   ToolExposureTier,
 } from "./types/tool.js";
+export type {
+  CardBlock,
+  ChecklistBlock,
+  ChecklistItem,
+  ContentBlock,
+  ContentBlockType,
+  DecisionBlock,
+  DecisionOption,
+  DiffBlock,
+  HubBlockAction,
+  TextBlock,
+} from "./types/content-block.js";
+export {
+  applyHubBlockAction,
+  formatBlocksForPrompt,
+  parseMacBlocksFence,
+  validateContentBlocks,
+} from "./content-blocks.js";
 

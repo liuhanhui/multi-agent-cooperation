@@ -1,9 +1,13 @@
 import type { FastifyInstance } from "fastify";
-import type { PlatformEvent } from "@mac/shared";
+import type { HubBlockAction, PlatformEvent } from "@mac/shared";
+import {
+  applyHubBlockAction,
+  validateContentBlocks,
+} from "@mac/shared";
 import type { AppDeps } from "./deps.js";
 
 /**
- * Register thread + message REST routes (transport / identity membership).
+ * Register thread + message REST routes (transport / identity / Hub actions).
  * @param app - Fastify instance
  * @param deps - store, hub, cats for membership validation
  */
@@ -97,21 +101,70 @@ export function registerThreadRoutes(app: FastifyInstance, deps: AppDeps): void 
 
   app.post<{
     Params: { id: string };
-    Body: { content?: string; authorId?: string; role?: "user" | "assistant" | "system" };
+    Body: {
+      content?: string;
+      authorId?: string;
+      role?: "user" | "assistant" | "system";
+      blocks?: unknown;
+    };
   }>("/api/threads/:id/messages", async (req, reply) => {
     const thread = await store.getThread(req.params.id);
     if (!thread) return reply.code(404).send({ error: "Thread not found" });
     const content = req.body?.content?.trim() ?? "";
-    if (!content) return reply.code(400).send({ error: "content required" });
+    let blocks;
+    try {
+      blocks =
+        req.body?.blocks !== undefined ? validateContentBlocks(req.body.blocks) : undefined;
+    } catch (err) {
+      return reply.code(400).send({
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+    if (!content && !(blocks && blocks.length > 0)) {
+      return reply.code(400).send({ error: "content or blocks required" });
+    }
     const message = await store.appendMessage({
       threadId: thread.id,
       role: req.body?.role ?? "user",
       authorId: req.body?.authorId ?? "operator",
       content,
       status: "completed",
+      blocks,
     });
     const event: PlatformEvent = { type: "message.created", message };
     hub.publish(thread.id, event);
     return reply.code(201).send({ message });
+  });
+
+  /**
+   * Hub action callback: toggle checklist items / select decisions (M14 Done path).
+   */
+  app.post<{
+    Params: { id: string; messageId: string };
+    Body: HubBlockAction;
+  }>("/api/threads/:id/messages/:messageId/actions", async (req, reply) => {
+    const thread = await store.getThread(req.params.id);
+    if (!thread) return reply.code(404).send({ error: "Thread not found" });
+    const message = await store.getMessage(req.params.messageId);
+    if (!message || message.threadId !== thread.id) {
+      return reply.code(404).send({ error: "Message not found" });
+    }
+    if (!message.blocks?.length) {
+      return reply.code(400).send({ error: "Message has no interactive blocks" });
+    }
+    const action = req.body;
+    if (!action || typeof action !== "object" || !("type" in action)) {
+      return reply.code(400).send({ error: "action body required" });
+    }
+    try {
+      const nextBlocks = applyHubBlockAction(message.blocks, action);
+      const updated = await store.updateMessageBlocks(message.id, nextBlocks);
+      hub.publish(thread.id, { type: "message.updated", message: updated });
+      return { message: updated };
+    } catch (err) {
+      return reply.code(400).send({
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
   });
 }

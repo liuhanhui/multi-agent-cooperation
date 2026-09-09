@@ -1,6 +1,8 @@
 import type {
   CatConfig,
   HealthResponse,
+  HubBlockAction,
+  Message,
   SkillDetail,
   SkillSummary,
   Thread,
@@ -118,4 +120,27 @@ export function streamEchoMessage(threadId: string, content: string): Promise<un
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ content }),
   });
+}
+
+/**
+ * POST .../messages/:messageId/actions — Hub checklist/decision write-back (M14).
+ * @param threadId - Active thread
+ * @param messageId - Message that owns the blocks
+ * @param action - checklist.toggle or decision.select
+ * @returns Updated message
+ */
+export async function postMessageAction(
+  threadId: string,
+  messageId: string,
+  action: HubBlockAction,
+): Promise<Message> {
+  const data = await apiJson<{ message: Message }>(
+    `/api/threads/${threadId}/messages/${messageId}/actions`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(action),
+    },
+  );
+  return data.message;
 }

@@ -1,5 +1,5 @@
 import type { RefObject } from "react";
-import type { CatConfig, Message, Thread } from "@mac/shared";
+import type { CatConfig, HubBlockAction, Message, Thread } from "@mac/shared";
 import { Bubble } from "./Bubble";
 
 interface ChatPanelProps {
@@ -14,6 +14,8 @@ interface ChatPanelProps {
   onInsertMention: () => void;
   onSend: () => void;
   onEcho: () => void;
+  onBlockAction?: (messageId: string, action: HubBlockAction) => void;
+  actionBusy?: boolean;
 }
 
 /**
@@ -24,6 +26,8 @@ interface ChatPanelProps {
  * @param props.draft / onDraftChange - Composer controlled input
  * @param props.onInsertMention - Prefix `@defaultCat ` into the draft
  * @param props.onSend / onEcho - Invoke routed agents vs stream-echo demo
+ * @param props.onBlockAction - Hub checklist/decision write-back (M14)
+ * @param props.actionBusy - Disable block controls while posting
  */
 export function ChatPanel({
   thread,
@@ -37,6 +41,8 @@ export function ChatPanel({
   onInsertMention,
   onSend,
   onEcho,
+  onBlockAction,
+  actionBusy,
 }: ChatPanelProps) {
   const memberCats = thread.memberIds?.length
     ? cats.filter((c) => thread.memberIds.includes(c.id))
@@ -51,7 +57,6 @@ export function ChatPanel({
           <label htmlFor="default-cat">Default cat</label>
           <select
             id="default-cat"
-            // Prefer thread default; fall back so value always matches an <option>.
             value={thread.defaultCatId ?? defaultCat?.id ?? ""}
             onChange={(e) => onDefaultCatChange(e.target.value)}
             disabled={memberCats.length === 0}
@@ -85,7 +90,15 @@ export function ChatPanel({
         {messages.length === 0 ? (
           <p className="muted empty">No messages yet. Mention a cat or just Send.</p>
         ) : (
-          messages.map((m) => <Bubble key={m.id} message={m} cats={cats} />)
+          messages.map((m) => (
+            <Bubble
+              key={m.id}
+              message={m}
+              cats={cats}
+              onBlockAction={onBlockAction}
+              actionBusy={actionBusy}
+            />
+          ))
         )}
         <div ref={messagesEndRef} />
       </div>

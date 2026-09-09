@@ -1,4 +1,10 @@
-import type { Message, MessageRole, MessageStatus, Thread } from "@mac/shared";
+import type {
+  ContentBlock,
+  Message,
+  MessageRole,
+  MessageStatus,
+  Thread,
+} from "@mac/shared";
 
 export interface CreateThreadInput {
   title?: string;
@@ -18,10 +24,12 @@ export interface AppendMessageInput {
   authorId: string;
   content: string;
   status?: MessageStatus;
+  /** Optional structured Hub blocks (M14). */
+  blocks?: ContentBlock[];
 }
 
 /**
- * Thread / Message port (M03 + M05 members).
+ * Thread / Message port (M03 + M05 members + M14 blocks).
  *
  * Message status transitions:
  *   pending → streaming → completed
@@ -33,6 +41,7 @@ export interface AppendMessageInput {
  *   - thread.lastSeq === max(message.seq) or 0
  *   - cannot mutate a completed/failed message content via delta
  *   - defaultCatId is null or ∈ memberIds
+ *   - blocks may be updated on completed messages via updateMessageBlocks (Hub actions)
  */
 export interface MacStore {
   createThread(input: CreateThreadInput): Promise<Thread>;
@@ -45,4 +54,10 @@ export interface MacStore {
   applyDelta(messageId: string, delta: string): Promise<Message>;
   completeMessage(messageId: string, finalContent?: string): Promise<Message>;
   failMessage(messageId: string, error: string): Promise<Message>;
+  /**
+   * Replace structured blocks on a message (Hub checklist/decision write-back).
+   * @param messageId - Target message
+   * @param blocks - Full replacement blocks array
+   */
+  updateMessageBlocks(messageId: string, blocks: ContentBlock[]): Promise<Message>;
 }

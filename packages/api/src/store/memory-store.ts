@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
-import type { Message, Thread } from "@mac/shared";
+import type { ContentBlock, Message, Thread } from "@mac/shared";
+import { parseMacBlocksFence } from "@mac/shared";
 import type {
   AppendMessageInput,
   CreateThreadInput,
@@ -120,6 +121,9 @@ export function createMemoryStore(seed?: MemorySnapshot): MemoryStore {
         createdAt: ts,
         updatedAt: ts,
       };
+      if (input.blocks && input.blocks.length > 0) {
+        message.blocks = structuredClone(input.blocks);
+      }
       messages.set(message.id, message);
       const ids = byThread.get(thread.id) ?? [];
       ids.push(message.id);
@@ -163,6 +167,14 @@ export function createMemoryStore(seed?: MemorySnapshot): MemoryStore {
         throw new Error(`Cannot complete terminal message (${message.status})`);
       }
       if (finalContent !== undefined) message.content = finalContent;
+      // Agents may embed ```mac-blocks``` JSON; lift into structured field for Hub.
+      if (!message.blocks?.length) {
+        const parsed = parseMacBlocksFence(message.content);
+        if (parsed.blocks.length > 0) {
+          message.content = parsed.content;
+          message.blocks = parsed.blocks;
+        }
+      }
       message.status = "completed";
       message.updatedAt = nowIso();
       const thread = threads.get(message.threadId);
@@ -178,6 +190,16 @@ export function createMemoryStore(seed?: MemorySnapshot): MemoryStore {
       }
       message.status = "failed";
       message.error = error;
+      message.updatedAt = nowIso();
+      const thread = threads.get(message.threadId);
+      if (thread) thread.updatedAt = message.updatedAt;
+      return structuredClone(message);
+    },
+
+    async updateMessageBlocks(messageId: string, blocks: ContentBlock[]): Promise<Message> {
+      const message = messages.get(messageId);
+      if (!message) throw new Error(`Message not found: ${messageId}`);
+      message.blocks = structuredClone(blocks);
       message.updatedAt = nowIso();
       const thread = threads.get(message.threadId);
       if (thread) thread.updatedAt = message.updatedAt;

@@ -1,6 +1,7 @@
 import { createClient, type RedisClientType } from "redis";
 import { randomUUID } from "node:crypto";
-import type { Message, Thread } from "@mac/shared";
+import type { ContentBlock, Message, Thread } from "@mac/shared";
+import { parseMacBlocksFence } from "@mac/shared";
 import type {
   AppendMessageInput,
   CreateThreadInput,
@@ -131,6 +132,9 @@ export async function createRedisStore(url: string): Promise<MacStore> {
         createdAt: ts,
         updatedAt: ts,
       };
+      if (input.blocks && input.blocks.length > 0) {
+        message.blocks = input.blocks;
+      }
       thread.lastSeq = seq;
       thread.updatedAt = ts;
       await client.set(messageKey(message.id), JSON.stringify(message));
@@ -178,6 +182,13 @@ export async function createRedisStore(url: string): Promise<MacStore> {
         throw new Error(`Cannot complete terminal message (${message.status})`);
       }
       if (finalContent !== undefined) message.content = finalContent;
+      if (!message.blocks?.length) {
+        const parsed = parseMacBlocksFence(message.content);
+        if (parsed.blocks.length > 0) {
+          message.content = parsed.content;
+          message.blocks = parsed.blocks;
+        }
+      }
       message.status = "completed";
       message.updatedAt = nowIso();
       await client.set(messageKey(message.id), JSON.stringify(message));
@@ -197,6 +208,20 @@ export async function createRedisStore(url: string): Promise<MacStore> {
       }
       message.status = "failed";
       message.error = error;
+      message.updatedAt = nowIso();
+      await client.set(messageKey(message.id), JSON.stringify(message));
+      const thread = await readThread(message.threadId);
+      if (thread) {
+        thread.updatedAt = message.updatedAt;
+        await writeThread(thread);
+      }
+      return message;
+    },
+
+    async updateMessageBlocks(messageId: string, blocks: ContentBlock[]): Promise<Message> {
+      const message = await readMessage(messageId);
+      if (!message) throw new Error(`Message not found: ${messageId}`);
+      message.blocks = blocks;
       message.updatedAt = nowIso();
       await client.set(messageKey(message.id), JSON.stringify(message));
       const thread = await readThread(message.threadId);

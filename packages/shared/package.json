@@ -14,7 +14,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --import tsx --test src/mention.test.ts src/handoff.test.ts",
+    "test": "node --import tsx --test src/mention.test.ts src/handoff.test.ts src/content-blocks.test.ts",
     "dev": "tsc -p tsconfig.json --watch --preserveWatchOutput"
   },
   "devDependencies": {

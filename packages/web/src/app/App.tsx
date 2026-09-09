@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { invokeMessage, streamEchoMessage } from "../api/endpoints";
+import type { HubBlockAction } from "@mac/shared";
+import { invokeMessage, postMessageAction, streamEchoMessage } from "../api/endpoints";
 import { mentionSuggestion, parseMentions } from "../chat/mention";
 import { ChatPanel } from "../components/ChatPanel";
 import { SkillsPanel } from "../components/SkillsPanel";
@@ -9,7 +10,7 @@ import { useThreadSocket } from "../hooks/useThreadSocket";
 import { useWorkspaceData } from "../hooks/useWorkspaceData";
 
 /**
- * Chat shell: wires workspace data, WS bubbles, skills/tools browse, and composer UX.
+ * Chat shell: wires workspace data, WS bubbles, skills/tools/Hub-actions, and composer UX.
  * Composition root only — HTTP/WS/routing live in api/ + hooks/ + shared.
  */
 export function App() {
@@ -37,11 +38,11 @@ export function App() {
     setDefaultCat,
   } = useWorkspaceData();
 
-  // Stabilize for useThreadSocket effect deps (setError identity is stable from useState).
   const onWsError = useCallback((message: string) => setError(message), [setError]);
   const { messages, wsState } = useThreadSocket(activeId, onWsError);
 
   const [draft, setDraft] = useState("");
+  const [actionBusy, setActionBusy] = useState(false);
   const messagesEnd = useRef<HTMLDivElement | null>(null);
   const activeThread = threads.find((t) => t.id === activeId) ?? null;
 
@@ -62,6 +63,24 @@ export function App() {
   }
 
   /**
+   * Write back a Hub block action (checklist toggle / decision) for the active thread.
+   * @param messageId - Message owning the block
+   * @param action - HubBlockAction payload
+   */
+  async function handleBlockAction(messageId: string, action: HubBlockAction): Promise<void> {
+    if (!activeId) return;
+    setActionBusy(true);
+    setError(null);
+    try {
+      await postMessageAction(activeId, messageId, action);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setActionBusy(false);
+    }
+  }
+
+  /**
    * Send the composer draft: echo streams locally, invoke uses server @mention routing.
    * @param mode - `invoke` runs agent(s); `echo` is the stream demo without an agent
    */
@@ -77,7 +96,6 @@ export function App() {
         return;
       }
 
-      // Client-side preview only; server re-parses and is the routing authority.
       const preview = parseMentions(draft, cats);
       if (preview.unresolved.length > 0) {
         setError(`Unknown mention: @${preview.unresolved[0]}`);
@@ -102,7 +120,7 @@ export function App() {
         <p className="brand">Multi-Agent Cooperation</p>
         <h1 className="page-title">Chat</h1>
         <p className="lede tight">
-          Wave 3 — skills + MCP tools; Hub lists catalogs with governance annotations.
+          Wave 3 — skills, MCP tools, and Hub actions (checklist / decision write-back).
         </p>
         <p className="meta">
           health:{" "}
@@ -142,6 +160,8 @@ export function App() {
             onInsertMention={insertMention}
             onSend={() => void sendMessage("invoke")}
             onEcho={() => void sendMessage("echo")}
+            onBlockAction={(id, action) => void handleBlockAction(id, action)}
+            actionBusy={actionBusy}
           />
         )}
 

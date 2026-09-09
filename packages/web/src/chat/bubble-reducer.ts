@@ -29,6 +29,7 @@ function applyPlatformEvent(state: Message[], event: PlatformEvent): Message[] {
     case "message.created":
     case "message.completed":
     case "message.failed":
+    case "message.updated":
       return upsertById(state, {
         ...event.message,
         // Terminal events clear any live CLI progress hint.

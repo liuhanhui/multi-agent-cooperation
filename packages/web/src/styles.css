@@ -320,6 +320,78 @@ button.ghost {
   animation: blink 1s step-end infinite;
 }
 
+.content-blocks {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.55rem;
+}
+
+.block-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.block-checklist ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.check-row {
+  display: flex;
+  gap: 0.45rem;
+  align-items: flex-start;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.decision-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.decision-opt {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 0.85rem;
+}
+
+.decision-opt.selected {
+  border-color: var(--accent);
+  background: rgba(61, 155, 143, 0.18);
+}
+
+.block-diff pre,
+.diff-before,
+.diff-after {
+  margin: 0.25rem 0 0;
+  padding: 0.5rem;
+  font-size: 0.75rem;
+  overflow: auto;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid var(--line);
+}
+
+.block-card {
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.block-card.tone-warn {
+  border-color: #c48a3a;
+}
+
+.block-card.tone-success {
+  border-color: var(--accent);
+}
+
+
 @keyframes blink {
   50% {
     opacity: 0;
