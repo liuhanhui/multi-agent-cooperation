@@ -27,6 +27,7 @@ Structure cleanup (`chore/structure-align-cells`): keep Fastify + React; align f
 | `features/` + `http/routes-features.ts` | portable-governance | FeatureStore, SOP advance, bulletin |
 | `sop/feature-lifecycle.yaml` (repo) | portable-governance | Light SOP stages (doc + reference) |
 | `memory/` + `http/routes-evidence.ts` | memory | EvidenceStore (SQLite FTS5), retrieve + inject |
+| `memory/lanes/` + `http/routes-write-lanes.ts` | memory | Write lanes + conflict disposition |
 | `cats/` | identity-session | read-only registry load |
 | `store/` | scaffold / persistence | memory + redis ports |
 | `ws/thread-hub.ts` | transport | fan-out |
@@ -43,6 +44,7 @@ Structure cleanup (`chore/structure-align-cells`): keep Fastify + React; align f
 | `features/session/` | thread-navigation | active thread sessionStorage |
 | `components/MissionBoard.tsx` | portable-governance | Mission columns + create/advance/bind |
 | `components/EvidencePanel.tsx` | memory | Evidence write / BM25 search |
+| `components/WriteLanesPanel.tsx` | memory | Lane write + conflict disposition |
 | `components/` | presentation | Sidebar / ChatPanel / Bubble / Skills / Tools |
 
 ## Shared (`packages/shared/src`)
@@ -52,6 +54,7 @@ Structure cleanup (`chore/structure-align-cells`): keep Fastify + React; align f
 | `types/*` | Terminal schemas (health, cat, thread, message, events, feature, evidence) |
 | `types/feature.ts` | Feature / FeatureStage / BulletinBoard + SOP transitions |
 | `types/evidence.ts` | Evidence + provenance + retrieval result shapes |
+| `types/write-lane.ts` | WriteLaneId / proposal / disposition / result |
 | `mention.ts` | `parseMentions` (routing authority shared with API) |
 | `index.ts` | Barrel re-exports only |
 

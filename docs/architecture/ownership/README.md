@@ -24,7 +24,7 @@ Why: one sentence
 | `hub-action-surface` | active | Skills + rich blocks (checklist/decision) + Hub action write-back | M12 / M14 |
 | `mcp-surface-governance` | active | MCP tool identity, exposure tiers, callback bridge | M13 |
 | `portable-governance` | active | Light SOP / Mission Hub (FeatureStore + bulletin) | M15 |
-| `memory` | active (thin) | Evidence SQLite + BM25 retrieval injection | M16 |
+| `memory` | active | Evidence SQLite + BM25 + write lanes (decision/profile/event) | M16 / M17 |
 | `ball-custody` | planned | Who holds the ball / wait contracts | M19 |
 | `approval-index` | planned | Human approval aggregation | M20 |
 | `plugin` | planned | Extensibility host | M23 |

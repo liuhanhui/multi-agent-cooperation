@@ -82,4 +82,15 @@ export type {
   EvidenceProvenance,
   EvidenceRetrievalResult,
 } from "./types/evidence.js";
+export {
+  isWriteLaneId,
+  laneTag,
+  subjectTag,
+  WRITE_LANE_IDS,
+  type WriteDisposition,
+  type WriteDispositionChoice,
+  type WriteLaneId,
+  type WriteLaneProposal,
+  type WriteLaneResult,
+} from "./types/write-lane.js";
 

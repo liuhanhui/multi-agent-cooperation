@@ -19,9 +19,11 @@ import { registerMetaRoutes } from "./http/routes-meta.js";
 import { registerSkillRoutes } from "./http/routes-skills.js";
 import { registerThreadRoutes } from "./http/routes-threads.js";
 import { registerToolRoutes } from "./http/routes-tools.js";
+import { registerWriteLaneRoutes } from "./http/routes-write-lanes.js";
 import { registerWsRoutes } from "./http/routes-ws.js";
 import { FeatureStore } from "./features/feature-store.js";
 import { EvidenceStore } from "./memory/evidence-store.js";
+import { WriteLaneService } from "./memory/lanes/write-lane-service.js";
 import { ToolRegistry } from "./mcp/tool-registry.js";
 import {
   loadSkillRegistry,
@@ -61,6 +63,8 @@ export interface AppOptions {
   evidenceDbPath?: string;
   /** Disable evidence memory (rare; tests). */
   disableEvidence?: boolean;
+  /** Optional WriteLaneService (tests). */
+  writeLanes?: WriteLaneService;
 }
 
 /**
@@ -107,6 +111,9 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
           dbPath: opts.evidenceDbPath ?? process.env.MAC_EVIDENCE_DB ?? ":memory:",
         }));
 
+  const writeLaneService =
+    opts.writeLanes ?? (evidenceStore ? new WriteLaneService(evidenceStore) : undefined);
+
   const dispatcher = opts.agent
     ? new InvocationDispatcher({
         store: opts.store,
@@ -147,6 +154,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     tools,
     features: featureStore,
     evidence: evidenceStore,
+    writeLanes: writeLaneService,
   };
 
   // Restart safety: pending/streaming bubbles → failed(orphan-recovered).
@@ -166,6 +174,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   registerToolRoutes(app, deps);
   registerFeatureRoutes(app, deps);
   registerEvidenceRoutes(app, deps);
+  registerWriteLaneRoutes(app, deps);
   registerWsRoutes(app, deps);
 
   return app;

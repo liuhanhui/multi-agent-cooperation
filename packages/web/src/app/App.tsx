@@ -8,6 +8,7 @@ import { MissionBoard } from "../components/MissionBoard";
 import { SkillsPanel } from "../components/SkillsPanel";
 import { ToolsPanel } from "../components/ToolsPanel";
 import { ThreadSidebar } from "../components/ThreadSidebar";
+import { WriteLanesPanel } from "../components/WriteLanesPanel";
 import { useThreadSocket } from "../hooks/useThreadSocket";
 import { useWorkspaceData } from "../hooks/useWorkspaceData";
 
@@ -38,6 +39,8 @@ export function App() {
     refreshEvidence,
     searchEvidenceCue,
     writeEvidence,
+    laneDispositions,
+    writeLaneProposal,
     activeId,
     setActiveId,
     title,
@@ -56,6 +59,7 @@ export function App() {
   const [actionBusy, setActionBusy] = useState(false);
   const [missionBusy, setMissionBusy] = useState(false);
   const [evidenceBusy, setEvidenceBusy] = useState(false);
+  const [lanesBusy, setLanesBusy] = useState(false);
   const messagesEnd = useRef<HTMLDivElement | null>(null);
   const activeThread = threads.find((t) => t.id === activeId) ?? null;
 
@@ -133,7 +137,7 @@ export function App() {
         <p className="brand">Multi-Agent Cooperation</p>
         <h1 className="page-title">Chat</h1>
         <p className="lede tight">
-          Wave 4 — evidence memory (BM25) injects into invoke; Mission + skills + tools remain.
+          Wave 4 — evidence + write lanes (decision / profile / event) with conflict disposition.
         </p>
         <p className="meta">
           health:{" "}
@@ -240,6 +244,18 @@ export function App() {
                 await writeEvidence(input);
               } finally {
                 setEvidenceBusy(false);
+              }
+            }}
+          />
+          <WriteLanesPanel
+            dispositions={laneDispositions}
+            busy={lanesBusy}
+            onWrite={async (input) => {
+              setLanesBusy(true);
+              try {
+                return await writeLaneProposal(input);
+              } finally {
+                setLanesBusy(false);
               }
             }}
           />
