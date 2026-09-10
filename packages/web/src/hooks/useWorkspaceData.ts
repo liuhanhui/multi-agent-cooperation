@@ -9,6 +9,9 @@ import type {
   SkillSummary,
   Thread,
   ToolCatalogEntry,
+  WriteDispositionChoice,
+  WriteLaneId,
+  WriteLaneResult,
 } from "@mac/shared";
 import {
   advanceFeature,
@@ -20,12 +23,14 @@ import {
   fetchCats,
   fetchEvidenceList,
   fetchHealth,
+  fetchLaneDispositions,
   fetchSkill,
   fetchSkills,
   fetchThreads,
   fetchTools,
   patchThreadMembers,
   searchEvidence,
+  writeLane,
 } from "../api/endpoints";
 import {
   readActiveThreadId,
@@ -64,6 +69,15 @@ export interface UseWorkspaceDataResult {
     tags?: string[];
     provenance: { source: string; actorId?: string };
   }) => Promise<void>;
+  laneDispositions: WriteLaneResult[];
+  refreshLaneDispositions: () => Promise<void>;
+  writeLaneProposal: (input: {
+    lane: WriteLaneId;
+    title: string;
+    body: string;
+    subjectKey: string;
+    disposition?: WriteDispositionChoice;
+  }) => Promise<WriteLaneResult | null>;
   activeId: string | null;
   setActiveId: (id: string | null) => void;
   title: string;
@@ -94,6 +108,7 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
   const [bulletin, setBulletin] = useState<BulletinBoard | null>(null);
   const [evidenceList, setEvidenceList] = useState<Evidence[]>([]);
   const [evidenceSearchHits, setEvidenceSearchHits] = useState<EvidenceHit[] | null>(null);
+  const [laneDispositions, setLaneDispositions] = useState<WriteLaneResult[]>([]);
   const [activeId, setActiveId] = useState<string | null>(() => readActiveThreadId());
   const [title, setTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -132,6 +147,14 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
     setEvidenceSearchHits(null);
   }, []);
 
+  /**
+   * Reload recent write-lane dispositions.
+   */
+  const refreshLaneDispositions = useCallback(async () => {
+    const list = await fetchLaneDispositions();
+    setLaneDispositions(list);
+  }, []);
+
   useEffect(() => {
     void fetchHealth()
       .then(setHealth)
@@ -157,10 +180,13 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
     void refreshEvidence().catch((err: unknown) =>
       setError(err instanceof Error ? err.message : String(err)),
     );
+    void refreshLaneDispositions().catch((err: unknown) =>
+      setError(err instanceof Error ? err.message : String(err)),
+    );
     void refreshThreads().catch((err: unknown) =>
       setError(err instanceof Error ? err.message : String(err)),
     );
-  }, [refreshThreads, refreshBulletin, refreshEvidence]);
+  }, [refreshThreads, refreshBulletin, refreshEvidence, refreshLaneDispositions]);
 
   /**
    * Toggle/select a skill and load its body for Hub browse.
@@ -289,6 +315,36 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
   }
 
   /**
+   * Propose a lane write; returns conflict result for Hub disposition UI.
+   * @param input - Lane + proposal (+ optional disposition)
+   * @returns WriteLaneResult or null on transport error
+   */
+  async function writeLaneProposal(input: {
+    lane: WriteLaneId;
+    title: string;
+    body: string;
+    subjectKey: string;
+    disposition?: WriteDispositionChoice;
+  }): Promise<WriteLaneResult | null> {
+    setError(null);
+    try {
+      const result = await writeLane(input.lane, {
+        title: input.title,
+        body: input.body,
+        subjectKey: input.subjectKey,
+        disposition: input.disposition,
+        threadId: activeId ?? undefined,
+      });
+      await refreshLaneDispositions();
+      if (result.disposition === "accepted") await refreshEvidence();
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      return null;
+    }
+  }
+
+  /**
    * Create a thread from the sidebar title field and select it.
    */
   async function createThread(): Promise<void> {
@@ -343,6 +399,9 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
     refreshEvidence,
     searchEvidenceCue,
     writeEvidence,
+    laneDispositions,
+    refreshLaneDispositions,
+    writeLaneProposal,
     activeId,
     setActiveId,
     title,

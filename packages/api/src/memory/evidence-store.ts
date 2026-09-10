@@ -150,6 +150,21 @@ export class EvidenceStore {
   }
 
   /**
+   * Find the newest evidence tagged with both lane:* and subject:* (M17 conflict).
+   * @param laneTagValue - e.g. lane:decision_lesson
+   * @param subjectTagValue - e.g. subject:auth.token
+   * @returns Newest matching Evidence or undefined
+   */
+  findByLaneSubject(laneTagValue: string, subjectTagValue: string): Evidence | undefined {
+    const lane = laneTagValue.trim();
+    const subject = subjectTagValue.trim();
+    if (!lane || !subject) return undefined;
+    // Scan recent rows — M17 volume is small; tags are authoritative.
+    const rows = this.list(200);
+    return rows.find((e) => e.tags.includes(lane) && e.tags.includes(subject));
+  }
+
+  /**
    * Close the SQLite handle (tests / shutdown).
    */
   close(): void {

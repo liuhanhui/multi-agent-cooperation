@@ -5,8 +5,7 @@ Map delta: update required — SQLite evidence + BM25 + invoke injection
 
 ## Decision
 
-Per `docs/DECISIONS.md` #5: **Evidence store + retrieval injection first** (Profile lanes wait for M17).  
-Retrieval: **FTS5 BM25** via Node built-in `node:sqlite` (no native addon).
+Per `docs/DECISIONS.md` #5: Evidence store + retrieval first; **Profile (and Decision/Event) write lanes land in M17** — see [`write-lanes.md`](./write-lanes.md).
 
 ## Model
 

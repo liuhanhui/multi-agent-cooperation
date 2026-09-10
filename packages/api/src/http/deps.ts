@@ -5,6 +5,7 @@ import type { InvocationDispatcher } from "../dispatch/dispatcher.js";
 import type { FeatureStore } from "../features/feature-store.js";
 import type { HandoffService } from "../handoff/handoff-service.js";
 import type { EvidenceStore } from "../memory/evidence-store.js";
+import type { WriteLaneService } from "../memory/lanes/write-lane-service.js";
 import type { ToolRegistry } from "../mcp/tool-registry.js";
 import type { SkillRegistry } from "../skills/skill-registry.js";
 import type { MacStore } from "../store/types.js";
@@ -37,4 +38,6 @@ export interface AppDeps {
   features?: FeatureStore;
   /** M16 SQLite evidence store + BM25 retrieval. */
   evidence?: EvidenceStore;
+  /** M17 memory write lanes (single writer per lane). */
+  writeLanes?: WriteLaneService;
 }

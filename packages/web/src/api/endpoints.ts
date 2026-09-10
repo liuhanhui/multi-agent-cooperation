@@ -12,6 +12,9 @@ import type {
   SkillSummary,
   Thread,
   ToolCatalogEntry,
+  WriteDispositionChoice,
+  WriteLaneId,
+  WriteLaneResult,
 } from "@mac/shared";
 import { apiJson, apiJsonAccept202 } from "./http";
 
@@ -246,4 +249,50 @@ export async function createEvidence(input: {
     body: JSON.stringify(input),
   });
   return data.evidence;
+}
+
+/**
+ * GET /api/memory/lanes/dispositions — recent write-lane outcomes (M17).
+ * @returns Disposition results newest-first
+ */
+export async function fetchLaneDispositions(): Promise<WriteLaneResult[]> {
+  const data = await apiJson<{ dispositions: WriteLaneResult[] }>(
+    "/api/memory/lanes/dispositions",
+  );
+  return data.dispositions;
+}
+
+/**
+ * POST /api/memory/lanes/:lane/write — single-writer lane entry (M17).
+ * 409 conflict returns result with conflict (does not throw).
+ * @param lane - WriteLaneId
+ * @param input - Proposal (+ optional disposition)
+ * @returns WriteLaneResult
+ */
+export async function writeLane(
+  lane: WriteLaneId,
+  input: {
+    title: string;
+    body: string;
+    subjectKey: string;
+    tags?: string[];
+    actorId?: string;
+    threadId?: string;
+    disposition?: WriteDispositionChoice;
+  },
+): Promise<WriteLaneResult> {
+  const res = await fetch(`/api/memory/lanes/${lane}/write`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  const data = (await res.json().catch(() => null)) as
+    | { result?: WriteLaneResult; error?: string }
+    | null;
+  if (res.status === 409 && data?.result) return data.result;
+  if (!res.ok) {
+    throw new Error(data?.error ?? `HTTP ${res.status} /api/memory/lanes/${lane}/write`);
+  }
+  if (!data?.result) throw new Error("missing write lane result");
+  return data.result;
 }

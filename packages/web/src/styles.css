@@ -108,8 +108,16 @@ body {
 
 .catalog-rail .skills-panel,
 .catalog-rail .tools-panel,
-.catalog-rail .evidence-panel {
+.catalog-rail .evidence-panel,
+.catalog-rail .write-lanes-panel {
   flex: 0 0 auto;
+}
+
+.lane-conflict {
+  border: 1px solid var(--err);
+  padding: 0.45rem 0.5rem;
+  display: grid;
+  gap: 0.35rem;
 }
 
 .evidence-form {
