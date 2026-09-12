@@ -54,7 +54,7 @@ export function ChatPanel({
     <section className="chat">
       <div className="chat-toolbar">
         <div className="row cat-row">
-          <label htmlFor="default-cat">Default cat</label>
+          <label htmlFor="default-cat">Lead cat</label>
           <select
             id="default-cat"
             value={thread.defaultCatId ?? defaultCat?.id ?? ""}
@@ -68,11 +68,11 @@ export function ChatPanel({
             ))}
           </select>
           <button type="button" className="ghost" onClick={onInsertMention} title="Insert @default cat">
-            @mention
+            @call
           </button>
         </div>
         <p className="chat-hint muted">
-          ws:{wsState} · no @ → {defaultCat?.displayName ?? "default"} · try{" "}
+          live · {wsState} · no @ → {defaultCat?.displayName ?? "default"} · try{" "}
           <code>@{defaultCat?.id ?? "architect"} hello</code>
           {secondCat ? (
             <>
@@ -88,7 +88,17 @@ export function ChatPanel({
 
       <div className="messages" aria-live="polite">
         {messages.length === 0 ? (
-          <p className="muted empty">No messages yet. Mention a cat or just Send.</p>
+          <div className="empty">
+            <div className="paw-trail" aria-hidden="true">
+              <span className="paw soft lg" />
+              <span className="paw mint" />
+              <span className="paw soft" />
+            </div>
+            <p className="chat-empty-title">Say hello</p>
+            <p className="muted tight">
+              Mention a cat, or just Send — the lead cat will pick up the yarn.
+            </p>
+          </div>
         ) : (
           messages.map((m) => (
             <Bubble
@@ -113,10 +123,13 @@ export function ChatPanel({
         <input
           value={draft}
           onChange={(e) => onDraftChange(e.target.value)}
-          placeholder={`Message…  or  @${defaultCat?.id ?? "architect"} …`}
+          placeholder={`Whisper to the lounge…  or  @${defaultCat?.id ?? "architect"} …`}
           aria-label="Message"
         />
-        <button type="submit">Send</button>
+        <button type="submit">
+          <span className="paw" aria-hidden="true" />
+          Send
+        </button>
         <button type="button" className="ghost" onClick={onEcho}>
           Echo
         </button>

@@ -93,4 +93,12 @@ export {
   type WriteLaneProposal,
   type WriteLaneResult,
 } from "./types/write-lane.js";
+export {
+  canOverwriteCompletedContent,
+  freshnessVerdict,
+  type DeliveryBatch,
+  type ReceiptSupplement,
+  type TargetReceipt,
+  type TargetReceiptStatus,
+} from "./types/receipt.js";
 

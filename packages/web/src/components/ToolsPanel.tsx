@@ -20,7 +20,7 @@ export function ToolsPanel({ tools, aspects, selectedId, onSelect }: ToolsPanelP
       <header className="skills-head">
         <h2>Tools</h2>
         <p className="muted tight">
-          MCP · aspects {aspects.length ? aspects.join(" · ") : "…"}
+          Shared paws · {aspects.length ? aspects.join(" · ") : "…"}
         </p>
       </header>
       {tools.length === 0 ? (

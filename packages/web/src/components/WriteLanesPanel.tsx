@@ -77,7 +77,7 @@ export function WriteLanesPanel({ dispositions, busy = false, onWrite }: WriteLa
     <aside className="skills-panel write-lanes-panel" aria-label="Memory write lanes">
       <header className="skills-head">
         <h2>Write lanes</h2>
-        <p className="muted tight">Decision · Profile · Event · disposition on conflict</p>
+        <p className="muted tight">One writer per shelf · disposition when paths cross</p>
       </header>
 
       <div className="evidence-form">

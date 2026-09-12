@@ -13,6 +13,7 @@ Structure cleanup (`chore/structure-align-cells`): keep Fastify + React; align f
 | `http/routes-invoke.ts` | routing-context + dispatch + cli-integration | invoke enqueue, cancel, stream-echo |
 | `http/routes-ws.ts` | transport | `/ws` hydrate + subscribe |
 | `dispatch/` | dispatch | InvocationDispatcher, TurnExecutionStore, reconcile |
+| `receipts/` + `http/routes-receipts.ts` | bubble-pipeline + dispatch | Per-target receipts + freshness (no late overwrite) |
 | `callback-auth/` | callback-auth | InvocationCredentialStore + bearer verify |
 | `http/routes-callbacks.ts` | callback-auth | Agent callback ingress + auth-failures |
 | `routing/` | routing-context | mention → catIds policy |
@@ -45,6 +46,7 @@ Structure cleanup (`chore/structure-align-cells`): keep Fastify + React; align f
 | `components/MissionBoard.tsx` | portable-governance | Mission columns + create/advance/bind |
 | `components/EvidencePanel.tsx` | memory | Evidence write / BM25 search |
 | `components/WriteLanesPanel.tsx` | memory | Lane write + conflict disposition |
+| `components/ReceiptsPanel.tsx` | bubble-pipeline + dispatch | Per-target receipt browse / supplement / ack |
 | `components/` | presentation | Sidebar / ChatPanel / Bubble / Skills / Tools |
 
 ## Shared (`packages/shared/src`)
@@ -55,6 +57,7 @@ Structure cleanup (`chore/structure-align-cells`): keep Fastify + React; align f
 | `types/feature.ts` | Feature / FeatureStage / BulletinBoard + SOP transitions |
 | `types/evidence.ts` | Evidence + provenance + retrieval result shapes |
 | `types/write-lane.ts` | WriteLaneId / proposal / disposition / result |
+| `types/receipt.ts` | DeliveryBatch / TargetReceipt / freshness helpers |
 | `mention.ts` | `parseMentions` (routing authority shared with API) |
 | `index.ts` | Barrel re-exports only |
 

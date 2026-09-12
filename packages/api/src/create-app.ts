@@ -20,11 +20,13 @@ import { registerSkillRoutes } from "./http/routes-skills.js";
 import { registerThreadRoutes } from "./http/routes-threads.js";
 import { registerToolRoutes } from "./http/routes-tools.js";
 import { registerWriteLaneRoutes } from "./http/routes-write-lanes.js";
+import { registerReceiptRoutes } from "./http/routes-receipts.js";
 import { registerWsRoutes } from "./http/routes-ws.js";
 import { FeatureStore } from "./features/feature-store.js";
 import { EvidenceStore } from "./memory/evidence-store.js";
 import { WriteLaneService } from "./memory/lanes/write-lane-service.js";
 import { ToolRegistry } from "./mcp/tool-registry.js";
+import { ReceiptStore } from "./receipts/receipt-store.js";
 import {
   loadSkillRegistry,
   resolveSkillsRoot,
@@ -65,6 +67,10 @@ export interface AppOptions {
   disableEvidence?: boolean;
   /** Optional WriteLaneService (tests). */
   writeLanes?: WriteLaneService;
+  /** Optional ReceiptStore (tests). */
+  receipts?: ReceiptStore;
+  /** Disable receipt tracking (rare; tests). */
+  disableReceipts?: boolean;
 }
 
 /**
@@ -114,6 +120,9 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   const writeLaneService =
     opts.writeLanes ?? (evidenceStore ? new WriteLaneService(evidenceStore) : undefined);
 
+  const receiptStore =
+    opts.receipts ?? (opts.disableReceipts ? undefined : new ReceiptStore());
+
   const dispatcher = opts.agent
     ? new InvocationDispatcher({
         store: opts.store,
@@ -122,6 +131,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
         executions,
         credentials,
         publicBaseUrl,
+        receipts: receiptStore,
       })
     : undefined;
 
@@ -155,6 +165,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     features: featureStore,
     evidence: evidenceStore,
     writeLanes: writeLaneService,
+    receipts: receiptStore,
   };
 
   // Restart safety: pending/streaming bubbles → failed(orphan-recovered).
@@ -175,6 +186,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   registerFeatureRoutes(app, deps);
   registerEvidenceRoutes(app, deps);
   registerWriteLaneRoutes(app, deps);
+  registerReceiptRoutes(app, deps);
   registerWsRoutes(app, deps);
 
   return app;

@@ -28,7 +28,7 @@ export function SkillsPanel({
       <header className="skills-head">
         <h2>Skills</h2>
         <p className="muted tight">
-          On-demand injection · budget {tokenBudget ?? "…"} tokens
+          Pocket guides · budget {tokenBudget ?? "…"} tokens
         </p>
       </header>
       {skills.length === 0 ? (

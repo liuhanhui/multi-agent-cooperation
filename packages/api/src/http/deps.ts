@@ -6,6 +6,7 @@ import type { FeatureStore } from "../features/feature-store.js";
 import type { HandoffService } from "../handoff/handoff-service.js";
 import type { EvidenceStore } from "../memory/evidence-store.js";
 import type { WriteLaneService } from "../memory/lanes/write-lane-service.js";
+import type { ReceiptStore } from "../receipts/receipt-store.js";
 import type { ToolRegistry } from "../mcp/tool-registry.js";
 import type { SkillRegistry } from "../skills/skill-registry.js";
 import type { MacStore } from "../store/types.js";
@@ -40,4 +41,6 @@ export interface AppDeps {
   evidence?: EvidenceStore;
   /** M17 memory write lanes (single writer per lane). */
   writeLanes?: WriteLaneService;
+  /** M18 per-target delivery receipts + freshness. */
+  receipts?: ReceiptStore;
 }

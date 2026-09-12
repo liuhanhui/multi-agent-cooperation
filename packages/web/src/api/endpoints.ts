@@ -1,6 +1,7 @@
 import type {
   BulletinBoard,
   CatConfig,
+  DeliveryBatch,
   Evidence,
   EvidenceHit,
   Feature,
@@ -10,6 +11,7 @@ import type {
   Message,
   SkillDetail,
   SkillSummary,
+  TargetReceipt,
   Thread,
   ToolCatalogEntry,
   WriteDispositionChoice,
@@ -295,4 +297,52 @@ export async function writeLane(
   }
   if (!data?.result) throw new Error("missing write lane result");
   return data.result;
+}
+
+/**
+ * GET /api/threads/:threadId/receipts — delivery batches for a thread (M18).
+ * @param threadId - Active thread
+ * @returns Batches with nested per-target receipts
+ */
+export async function fetchThreadReceipts(
+  threadId: string,
+): Promise<Array<{ batch: DeliveryBatch; receipts: TargetReceipt[] }>> {
+  const data = await apiJson<{
+    batches: Array<{ batch: DeliveryBatch; receipts: TargetReceipt[] }>;
+  }>(`/api/threads/${threadId}/receipts`);
+  return data.batches;
+}
+
+/**
+ * POST /api/receipts/:id/supplements — append non-authoritative late text.
+ * @param receiptId - Target receipt
+ * @param content - Supplement body
+ * @returns Updated receipt
+ */
+export async function appendReceiptSupplement(
+  receiptId: string,
+  content: string,
+): Promise<TargetReceipt> {
+  const data = await apiJson<{ receipt: TargetReceipt }>(
+    `/api/receipts/${receiptId}/supplements`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ content }),
+    },
+  );
+  return data.receipt;
+}
+
+/**
+ * POST /api/receipts/:id/ack — ack a delivered receipt.
+ * @param receiptId - Target receipt
+ * @returns Updated receipt
+ */
+export async function ackReceipt(receiptId: string): Promise<TargetReceipt> {
+  const data = await apiJson<{ receipt: TargetReceipt }>(
+    `/api/receipts/${receiptId}/ack`,
+    { method: "POST" },
+  );
+  return data.receipt;
 }

@@ -2,11 +2,13 @@ import { useCallback, useEffect, useState } from "react";
 import type {
   BulletinBoard,
   CatConfig,
+  DeliveryBatch,
   Evidence,
   EvidenceHit,
   FeatureStage,
   HealthResponse,
   SkillSummary,
+  TargetReceipt,
   Thread,
   ToolCatalogEntry,
   WriteDispositionChoice,
@@ -15,6 +17,8 @@ import type {
 } from "@mac/shared";
 import {
   advanceFeature,
+  ackReceipt,
+  appendReceiptSupplement,
   bindFeatureThread,
   createEvidence,
   createFeature,
@@ -26,6 +30,7 @@ import {
   fetchLaneDispositions,
   fetchSkill,
   fetchSkills,
+  fetchThreadReceipts,
   fetchThreads,
   fetchTools,
   patchThreadMembers,
@@ -78,6 +83,10 @@ export interface UseWorkspaceDataResult {
     subjectKey: string;
     disposition?: WriteDispositionChoice;
   }) => Promise<WriteLaneResult | null>;
+  receiptBatches: Array<{ batch: DeliveryBatch; receipts: TargetReceipt[] }>;
+  refreshReceipts: () => Promise<void>;
+  supplementReceipt: (receiptId: string, content: string) => Promise<void>;
+  ackTargetReceipt: (receiptId: string) => Promise<void>;
   activeId: string | null;
   setActiveId: (id: string | null) => void;
   title: string;
@@ -90,8 +99,8 @@ export interface UseWorkspaceDataResult {
 }
 
 /**
- * Load health/cats/threads/skills/tools/bulletin/evidence and own sidebar selection.
- * Cell: thread-navigation + identity-session + hub-action-surface + portable-governance + memory.
+ * Load health/cats/threads/skills/tools/bulletin/evidence/receipts and own sidebar selection.
+ * Cell: thread-navigation + identity-session + hub-action-surface + portable-governance + memory + bubble-pipeline.
  * @returns Workspace list state and mutators used by the chat shell
  */
 export function useWorkspaceData(): UseWorkspaceDataResult {
@@ -109,6 +118,9 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
   const [evidenceList, setEvidenceList] = useState<Evidence[]>([]);
   const [evidenceSearchHits, setEvidenceSearchHits] = useState<EvidenceHit[] | null>(null);
   const [laneDispositions, setLaneDispositions] = useState<WriteLaneResult[]>([]);
+  const [receiptBatches, setReceiptBatches] = useState<
+    Array<{ batch: DeliveryBatch; receipts: TargetReceipt[] }>
+  >([]);
   const [activeId, setActiveId] = useState<string | null>(() => readActiveThreadId());
   const [title, setTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -154,6 +166,24 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
     const list = await fetchLaneDispositions();
     setLaneDispositions(list);
   }, []);
+
+  /**
+   * Reload delivery receipt batches for the active thread (M18).
+   */
+  const refreshReceipts = useCallback(async () => {
+    if (!activeId) {
+      setReceiptBatches([]);
+      return;
+    }
+    const batches = await fetchThreadReceipts(activeId);
+    setReceiptBatches(batches);
+  }, [activeId]);
+
+  useEffect(() => {
+    void refreshReceipts().catch((err: unknown) =>
+      setError(err instanceof Error ? err.message : String(err)),
+    );
+  }, [refreshReceipts]);
 
   useEffect(() => {
     void fetchHealth()
@@ -345,6 +375,35 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
   }
 
   /**
+   * Append a non-authoritative supplement; refresh receipt list.
+   * @param receiptId - Target receipt
+   * @param content - Late text
+   */
+  async function supplementReceipt(receiptId: string, content: string): Promise<void> {
+    setError(null);
+    try {
+      await appendReceiptSupplement(receiptId, content);
+      await refreshReceipts();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  /**
+   * Ack a delivered receipt; refresh list.
+   * @param receiptId - Target receipt
+   */
+  async function ackTargetReceipt(receiptId: string): Promise<void> {
+    setError(null);
+    try {
+      await ackReceipt(receiptId);
+      await refreshReceipts();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  /**
    * Create a thread from the sidebar title field and select it.
    */
   async function createThread(): Promise<void> {
@@ -402,6 +461,10 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
     laneDispositions,
     refreshLaneDispositions,
     writeLaneProposal,
+    receiptBatches,
+    refreshReceipts,
+    supplementReceipt,
+    ackTargetReceipt,
     activeId,
     setActiveId,
     title,
