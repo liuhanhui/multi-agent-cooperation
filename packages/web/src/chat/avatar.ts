@@ -1,7 +1,15 @@
-/** Tiny deterministic avatar from author/cat id — initials only, no external assets. */
+/**
+ * Warm deterministic avatar colors for the three-cat lounge.
+ * Soft teal / sky / coral / honey — matches the light desk theme.
+ */
 
-const PALETTE = ["#3d9b8f", "#7aa2d4", "#c4a35a", "#b57bb6", "#d97b6c", "#6bbf8a"];
+const PALETTE = ["#2f9e8f", "#7eb6d9", "#e8846b", "#f0b35a", "#8bbf9a", "#c98bb8"];
 
+/**
+ * Pick a stable color from the author/cat id.
+ * @param seed - Cat id or author id
+ * @returns CSS color string
+ */
 export function avatarTone(seed: string): string {
   let hash = 0;
   for (let i = 0; i < seed.length; i += 1) {
@@ -10,6 +18,11 @@ export function avatarTone(seed: string): string {
   return PALETTE[hash % PALETTE.length] ?? PALETTE[0]!;
 }
 
+/**
+ * Build short initials for the avatar disc.
+ * @param label - Display name
+ * @returns 1–2 uppercase letters
+ */
 export function avatarInitials(label: string): string {
   const parts = label.trim().split(/[\s_-]+/).filter(Boolean);
   if (parts.length === 0) return "?";

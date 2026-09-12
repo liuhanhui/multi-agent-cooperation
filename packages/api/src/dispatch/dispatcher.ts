@@ -3,6 +3,7 @@ import type { InvocationCredential, QueueEntry, TurnExecution } from "@mac/share
 import type { AgentProvider } from "../agents/types.js";
 import { runRoutedInvocation } from "../agents/run-invocation.js";
 import type { InvocationCredentialStore } from "../callback-auth/credential-store.js";
+import type { ReceiptStore } from "../receipts/receipt-store.js";
 import type { MacStore } from "../store/types.js";
 import type { ThreadHub } from "../ws/thread-hub.js";
 import { TurnExecutionStore } from "./turn-execution-store.js";
@@ -42,6 +43,8 @@ export interface DispatcherDeps {
   credentials?: InvocationCredentialStore;
   /** Public API origin for callbackUrl (e.g. http://127.0.0.1:4010). */
   publicBaseUrl?: string;
+  /** M18 per-target delivery receipts + freshness. */
+  receipts?: ReceiptStore;
   /** Optional M09 handoff service for auto-review after completion. */
   handoffs?: {
     createAutoReview: (params: {
@@ -76,6 +79,8 @@ export class InvocationDispatcher {
   private readonly entryCredentials = new Map<string, InvocationCredential>();
   /** Entry ids currently executing (background). */
   private readonly inFlight = new Set<string>();
+  /** queueEntryId → delivery batch id (M18). */
+  private readonly entryBatches = new Map<string, string>();
 
   constructor(private readonly deps: DispatcherDeps) {}
 
@@ -281,8 +286,18 @@ export class InvocationDispatcher {
     const credential = this.entryCredentials.get(entryId);
     const base = this.deps.publicBaseUrl?.replace(/\/$/, "") ?? "";
 
+    // M18: open one receipt per target before turns run.
+    if (this.deps.receipts) {
+      const { batch } = this.deps.receipts.createBatch({
+        threadId: entry.threadId,
+        targetCatIds: entry.catIds,
+        queueEntryId: entryId,
+      });
+      this.entryBatches.set(entryId, batch.id);
+    }
+
     try {
-      await runRoutedInvocation({
+      const routed = await runRoutedInvocation({
         store: this.deps.store,
         hub: this.deps.hub,
         agent: this.deps.agent,
@@ -299,6 +314,17 @@ export class InvocationDispatcher {
         callbackExpiresAt: credential?.expiresAt,
         onTurn: (event) => this.handleTurnEvent(entryId, entry.threadId, event),
       });
+
+      // Attach source user message to the batch once known.
+      const batchId = this.entryBatches.get(entryId);
+      if (batchId && this.deps.receipts) {
+        const batch = this.deps.receipts.getBatch(batchId);
+        if (batch && !batch.sourceMessageId) {
+          // Recreate is heavy; store source on receipts via a lightweight patch:
+          // expose setSourceMessage on ReceiptStore.
+          this.deps.receipts.setSourceMessage(batchId, routed.userMessage.id);
+        }
+      }
 
       const current = this.deps.executions.getEntry(entryId)!;
       const turns = this.deps.executions.listTurnsByEntry(entryId);
@@ -324,6 +350,7 @@ export class InvocationDispatcher {
       this.agentPrompts.delete(entryId);
       this.autoReviews.delete(entryId);
       this.entryCredentials.delete(entryId);
+      this.entryBatches.delete(entryId);
       this.inFlight.delete(entryId);
       void this.pump();
     }
@@ -364,6 +391,7 @@ export class InvocationDispatcher {
 
   /**
    * Persist TurnExecution rows from runRoutedInvocation turn hooks.
+   * On turn end, mark the matching per-target receipt delivered/failed (M18).
    */
   private handleTurnEvent(
     queueEntryId: string,
@@ -393,6 +421,53 @@ export class InvocationDispatcher {
       error: event.error,
     };
     this.deps.executions.putTurn(turn);
+
+    if (event.phase === "end") {
+      void this.syncReceiptFromTurn(queueEntryId, event);
+    }
+  }
+
+  /**
+   * Mirror a finished turn onto its TargetReceipt (freshness freeze on deliver).
+   * @param queueEntryId - Running queue entry
+   * @param event - End-phase turn hook payload
+   */
+  private async syncReceiptFromTurn(
+    queueEntryId: string,
+    event: {
+      catId: string;
+      messageId: string | null;
+      status: TurnExecution["status"];
+      error?: string;
+    },
+  ): Promise<void> {
+    if (!this.deps.receipts) return;
+    const batchId =
+      this.entryBatches.get(queueEntryId) ??
+      this.deps.receipts.getBatchByQueueEntry(queueEntryId)?.id;
+    if (!batchId) return;
+
+    try {
+      if (event.status === "completed" && event.messageId) {
+        const msg = await this.deps.store.getMessage(event.messageId);
+        const content = msg?.content?.trim() ? msg.content : "(empty)";
+        this.deps.receipts.markDelivered(
+          batchId,
+          event.catId,
+          event.messageId,
+          content,
+        );
+      } else if (event.status === "failed" || event.status === "cancelled") {
+        this.deps.receipts.markFailed(
+          batchId,
+          event.catId,
+          event.messageId,
+          event.error ?? event.status,
+        );
+      }
+    } catch {
+      // Receipt update must not break dispatch; unit tests cover the store policy.
+    }
   }
 
   /**
@@ -423,6 +498,18 @@ export class InvocationDispatcher {
           error: error ?? turn.error,
           updatedAt: new Date().toISOString(),
         });
+      }
+    }
+
+    // M18: any target still pending after entry ends is not authoritative.
+    const batchId =
+      this.entryBatches.get(id) ??
+      this.deps.receipts?.getBatchByQueueEntry(id)?.id;
+    if (batchId && this.deps.receipts && status !== "completed") {
+      try {
+        this.deps.receipts.failPending(batchId, error ?? status);
+      } catch {
+        /* ignore */
       }
     }
   }

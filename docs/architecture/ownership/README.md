@@ -14,12 +14,12 @@ Why: one sentence
 |------|--------|---------|-----------------|
 | `scaffold` | active | Monorepo, health, env, start scripts; thin create-app / App shells | M02 / structure |
 | `transport` | active | Local WS ingress + thread subscribe/hydrate; web `api/` + `useThreadSocket` | M03 |
-| `bubble-pipeline` | active | Bubble reducer single-writer + streaming merge | M06 |
+| `bubble-pipeline` | active | Bubble reducer single-writer + streaming merge; delivery receipts / freshness | M06 / M18 |
 | `identity-session` | active | Cat registry + thread members/defaultCat | M05 |
 | `cli-integration` | active | Claude Code + Codex + Antigravity spawn/stdio → platform events; capability table | M04 / M11 |
 | `thread-navigation` | active (thin) | Sidebar thread list + session restore | M06 |
 | `routing-context` | active (thin) | @mention parse + serial multi-target route | M07 |
-| `dispatch` | active | InvocationQueue, busy gate, cancel, orphan reconcile; A2A handoff trigger | M08 / M09 |
+| `dispatch` | active | InvocationQueue, busy gate, cancel, orphan reconcile; A2A handoff; receipt batch sync | M08 / M09 / M18 |
 | `callback-auth` | active | Short-lived invocation tokens + callback 401/expiry telemetry | M10 |
 | `hub-action-surface` | active | Skills + rich blocks (checklist/decision) + Hub action write-back | M12 / M14 |
 | `mcp-surface-governance` | active | MCP tool identity, exposure tiers, callback bridge | M13 |

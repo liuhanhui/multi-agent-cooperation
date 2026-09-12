@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { HubBlockAction } from "@mac/shared";
 import { invokeMessage, postMessageAction, streamEchoMessage } from "../api/endpoints";
+import { avatarInitials, avatarTone } from "../chat/avatar";
 import { mentionSuggestion, parseMentions } from "../chat/mention";
 import { ChatPanel } from "../components/ChatPanel";
 import { EvidencePanel } from "../components/EvidencePanel";
@@ -9,11 +10,14 @@ import { SkillsPanel } from "../components/SkillsPanel";
 import { ToolsPanel } from "../components/ToolsPanel";
 import { ThreadSidebar } from "../components/ThreadSidebar";
 import { WriteLanesPanel } from "../components/WriteLanesPanel";
+import { ReceiptsPanel } from "../components/ReceiptsPanel";
 import { useThreadSocket } from "../hooks/useThreadSocket";
 import { useWorkspaceData } from "../hooks/useWorkspaceData";
 
+type CatalogTab = "evidence" | "lanes" | "receipts" | "skills" | "tools";
+
 /**
- * Chat shell: wires workspace data, WS bubbles, Mission Hub, skills/tools/Hub-actions.
+ * Chat shell: warm three-cat lounge layout over workspace data + WS bubbles.
  * Composition root only — HTTP/WS/routing live in api/ + hooks/ + shared.
  */
 export function App() {
@@ -41,6 +45,10 @@ export function App() {
     writeEvidence,
     laneDispositions,
     writeLaneProposal,
+    receiptBatches,
+    refreshReceipts,
+    supplementReceipt,
+    ackTargetReceipt,
     activeId,
     setActiveId,
     title,
@@ -60,6 +68,8 @@ export function App() {
   const [missionBusy, setMissionBusy] = useState(false);
   const [evidenceBusy, setEvidenceBusy] = useState(false);
   const [lanesBusy, setLanesBusy] = useState(false);
+  const [receiptsBusy, setReceiptsBusy] = useState(false);
+  const [catalogTab, setCatalogTab] = useState<CatalogTab>("evidence");
   const messagesEnd = useRef<HTMLDivElement | null>(null);
   const activeThread = threads.find((t) => t.id === activeId) ?? null;
 
@@ -126,30 +136,69 @@ export function App() {
       await invokeMessage(activeId, draft.trim());
       setDraft("");
       await refreshThreads();
+      void refreshReceipts();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
   }
 
+  const featureCount = bulletin
+    ? bulletin.columns.reduce((n, c) => n + c.features.length, 0)
+    : 0;
+  const receiptCount = receiptBatches.reduce((n, b) => n + b.receipts.length, 0);
+
   return (
     <main className="shell app">
       <header className="top">
-        <p className="brand">Multi-Agent Cooperation</p>
-        <h1 className="page-title">Chat</h1>
-        <p className="lede tight">
-          Wave 4 — evidence + write lanes (decision / profile / event) with conflict disposition.
-        </p>
-        <p className="meta">
-          health:{" "}
-          {health
-            ? `${health.status}/${health.store}${health.agent ? `/${health.agent}` : ""}`
-            : "…"}{" "}
-          · cats: {cats.length} · skills: {skills.length} · tools: {tools.length}
-          {bulletin
-            ? ` · features: ${bulletin.columns.reduce((n, c) => n + c.features.length, 0)}`
-            : ""}
-          {` · evidence: ${evidenceList.length}`}
-        </p>
+        <div className="brand-row">
+          <div className="brand-block">
+            <div className="brand-wrap">
+              <span className="brand-face" aria-hidden="true">
+                <span className="brand-eye left" />
+                <span className="brand-eye right" />
+                <span className="brand-nose" />
+              </span>
+              <p className="brand">Cat Lounge</p>
+            </div>
+            <h1 className="page-title">Three cats · one warm desk</h1>
+            <p className="lede tight">
+              Architect, Reviewer, and Builder share this room — mention who should speak,
+              or let the default cat take the first paw.
+            </p>
+          </div>
+          <div className="crew" aria-label="Crew">
+            {cats.map((c) => (
+              <span key={c.id} className="crew-chip" data-cat={c.id}>
+                <span className="crew-dot" style={{ background: avatarTone(c.id) }}>
+                  {avatarInitials(c.displayName)}
+                </span>
+                {c.displayName}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="status-bar" aria-label="Workspace status">
+          <span className={`pill${health?.status === "ok" ? " ok" : ""}`}>
+            health <strong>{health?.status ?? "…"}</strong>
+            {health?.agent ? ` · ${health.agent}` : ""}
+          </span>
+          <span className="pill">
+            threads <strong>{threads.length}</strong>
+          </span>
+          <span className="pill">
+            missions <strong>{featureCount}</strong>
+          </span>
+          <span className="pill">
+            evidence <strong>{evidenceList.length}</strong>
+          </span>
+          <span className="pill">
+            receipts <strong>{receiptCount}</strong>
+          </span>
+          <span className="pill">
+            ws <strong>{wsState}</strong>
+          </span>
+        </div>
         {error ? <p className="err">{error}</p> : null}
       </header>
 
@@ -197,7 +246,17 @@ export function App() {
 
         {!activeThread ? (
           <section className="chat">
-            <p className="muted empty">Select or create a thread to start chatting.</p>
+            <div className="empty">
+              <div className="paw-trail" aria-hidden="true">
+                <span className="paw soft lg" />
+                <span className="paw mint" />
+                <span className="paw soft" />
+              </div>
+              <p className="chat-empty-title">The lounge is quiet</p>
+              <p className="muted tight">
+                Pick a thread on the left, or start a new one — the cats are ready when you are.
+              </p>
+            </div>
           </section>
         ) : (
           <ChatPanel
@@ -217,62 +276,129 @@ export function App() {
           />
         )}
 
-        <div className="catalog-rail">
-          <EvidencePanel
-            evidence={evidenceList}
-            searchHits={evidenceSearchHits}
-            busy={evidenceBusy}
-            onRefresh={async () => {
-              setEvidenceBusy(true);
-              try {
-                await refreshEvidence();
-              } finally {
-                setEvidenceBusy(false);
-              }
-            }}
-            onSearch={async (q) => {
-              setEvidenceBusy(true);
-              try {
-                await searchEvidenceCue(q);
-              } finally {
-                setEvidenceBusy(false);
-              }
-            }}
-            onCreate={async (input) => {
-              setEvidenceBusy(true);
-              try {
-                await writeEvidence(input);
-              } finally {
-                setEvidenceBusy(false);
-              }
-            }}
-          />
-          <WriteLanesPanel
-            dispositions={laneDispositions}
-            busy={lanesBusy}
-            onWrite={async (input) => {
-              setLanesBusy(true);
-              try {
-                return await writeLaneProposal(input);
-              } finally {
-                setLanesBusy(false);
-              }
-            }}
-          />
-          <SkillsPanel
-            skills={skills}
-            tokenBudget={skillsBudget}
-            selectedId={selectedSkillId}
-            detailBody={selectedSkillBody}
-            onSelect={(id) => void selectSkill(id)}
-          />
-          <ToolsPanel
-            tools={tools}
-            aspects={toolAspects}
-            selectedId={selectedToolId}
-            onSelect={selectTool}
-          />
-        </div>
+        <aside className="catalog-rail" aria-label="Desk shelf">
+          <div className="catalog-tabs" role="tablist" aria-label="Shelf tabs">
+            {(
+              [
+                ["evidence", "Memory"],
+                ["lanes", "Lanes"],
+                ["receipts", "Receipts"],
+                ["skills", "Skills"],
+                ["tools", "Tools"],
+              ] as const
+            ).map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={catalogTab === id}
+                className={`catalog-tab${catalogTab === id ? " active" : ""}`}
+                onClick={() => setCatalogTab(id)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <div className="catalog-pane" role="tabpanel">
+            {catalogTab === "evidence" ? (
+              <EvidencePanel
+                evidence={evidenceList}
+                searchHits={evidenceSearchHits}
+                busy={evidenceBusy}
+                onRefresh={async () => {
+                  setEvidenceBusy(true);
+                  try {
+                    await refreshEvidence();
+                  } finally {
+                    setEvidenceBusy(false);
+                  }
+                }}
+                onSearch={async (q) => {
+                  setEvidenceBusy(true);
+                  try {
+                    await searchEvidenceCue(q);
+                  } finally {
+                    setEvidenceBusy(false);
+                  }
+                }}
+                onCreate={async (input) => {
+                  setEvidenceBusy(true);
+                  try {
+                    await writeEvidence(input);
+                  } finally {
+                    setEvidenceBusy(false);
+                  }
+                }}
+              />
+            ) : null}
+
+            {catalogTab === "lanes" ? (
+              <WriteLanesPanel
+                dispositions={laneDispositions}
+                busy={lanesBusy}
+                onWrite={async (input) => {
+                  setLanesBusy(true);
+                  try {
+                    return await writeLaneProposal(input);
+                  } finally {
+                    setLanesBusy(false);
+                  }
+                }}
+              />
+            ) : null}
+
+            {catalogTab === "receipts" ? (
+              <ReceiptsPanel
+                batches={receiptBatches}
+                busy={receiptsBusy}
+                onRefresh={async () => {
+                  setReceiptsBusy(true);
+                  try {
+                    await refreshReceipts();
+                  } finally {
+                    setReceiptsBusy(false);
+                  }
+                }}
+                onSupplement={async (receiptId, content) => {
+                  setReceiptsBusy(true);
+                  try {
+                    await supplementReceipt(receiptId, content);
+                  } finally {
+                    setReceiptsBusy(false);
+                  }
+                }}
+                onAck={async (receiptId) => {
+                  setReceiptsBusy(true);
+                  try {
+                    await ackTargetReceipt(receiptId);
+                  } finally {
+                    setReceiptsBusy(false);
+                  }
+                }}
+              />
+            ) : null}
+
+            {catalogTab === "skills" ? (
+              <SkillsPanel
+                skills={skills}
+                tokenBudget={skillsBudget}
+                selectedId={selectedSkillId}
+                detailBody={selectedSkillBody}
+                onSelect={(id) => void selectSkill(id)}
+              />
+            ) : null}
+
+            {catalogTab === "tools" ? (
+              <ToolsPanel
+                tools={tools}
+                aspects={toolAspects}
+                selectedId={selectedToolId}
+                onSelect={selectTool}
+              />
+            ) : null}
+          </div>
+        </aside>
       </div>
     </main>
   );

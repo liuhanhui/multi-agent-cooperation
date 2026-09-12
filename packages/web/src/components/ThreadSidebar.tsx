@@ -30,15 +30,20 @@ export function ThreadSidebar({
   return (
     <aside className="sidebar">
       <h2 className="panel-title">Threads</h2>
+      <p className="muted tight">Cozy rooms for each conversation</p>
+      <div className="paw-trail" aria-hidden="true">
+        <span className="paw mint" />
+        <span className="paw soft" />
+      </div>
       <div className="row">
         <input
           value={title}
           onChange={(e) => onTitleChange(e.target.value)}
-          placeholder="New thread title"
+          placeholder="Name a new room…"
           aria-label="New thread title"
         />
         <button type="button" onClick={onCreate}>
-          New
+          Open
         </button>
       </div>
       <ul className="thread-list">

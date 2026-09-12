@@ -57,8 +57,8 @@ export function EvidencePanel({
   return (
     <aside className="skills-panel evidence-panel" aria-label="Evidence memory">
       <header className="skills-head">
-        <h2>Evidence</h2>
-        <p className="muted tight">SQLite · BM25 · provenance required</p>
+        <h2>Memory jar</h2>
+        <p className="muted tight">Save a lesson · search what the cats remember</p>
       </header>
 
       <div className="evidence-form">

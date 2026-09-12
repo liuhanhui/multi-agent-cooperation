@@ -57,53 +57,54 @@ export function MissionBoard({
   }
 
   return (
-    <section className="mission-board" aria-label="Mission Hub bulletin">
-      <header className="mission-head">
+    <details className="mission-board" aria-label="Mission Hub bulletin">
+      <summary>
         <div>
-          <h2>Mission</h2>
+          <h2>Mission board</h2>
           <p className="muted tight">
-            Light SOP · idea → spec → wip → review → done
+            Soft SOP path · idea → spec → wip → review → done
             {activeThreadId
-              ? ` · bind uses active thread`
-              : " · select a thread to bind"}
+              ? " · bind uses the open thread"
+              : " · open a thread to bind work"}
           </p>
         </div>
-        <div className="mission-create row">
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="New feature title"
-            disabled={busy}
-            aria-label="Feature title"
-          />
-          <input
-            value={summary}
-            onChange={(e) => setSummary(e.target.value)}
-            placeholder="Summary (optional)"
-            disabled={busy}
-            aria-label="Feature summary"
-          />
-          <select
-            value={ballHolderId}
-            onChange={(e) => setBallHolderId(e.target.value)}
-            disabled={busy || cats.length === 0}
-            aria-label="Ball holder"
-          >
-            <option value="">Ball holder…</option>
-            {cats.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.displayName}
-              </option>
-            ))}
-          </select>
-          <button type="button" disabled={busy || !title.trim()} onClick={() => void handleCreate()}>
-            Create
-          </button>
-        </div>
-      </header>
+      </summary>
+
+      <div className="mission-create row">
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="New feature title"
+          disabled={busy}
+          aria-label="Feature title"
+        />
+        <input
+          value={summary}
+          onChange={(e) => setSummary(e.target.value)}
+          placeholder="Summary (optional)"
+          disabled={busy}
+          aria-label="Feature summary"
+        />
+        <select
+          value={ballHolderId}
+          onChange={(e) => setBallHolderId(e.target.value)}
+          disabled={busy || cats.length === 0}
+          aria-label="Ball holder"
+        >
+          <option value="">Who holds the ball…</option>
+          {cats.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.displayName}
+            </option>
+          ))}
+        </select>
+        <button type="button" disabled={busy || !title.trim()} onClick={() => void handleCreate()}>
+          Create
+        </button>
+      </div>
 
       {!bulletin ? (
-        <p className="muted">Loading bulletin…</p>
+        <p className="muted">Warming up the bulletin…</p>
       ) : (
         <div className="mission-columns">
           {bulletin.columns.map((col) => (
@@ -130,7 +131,7 @@ export function MissionBoard({
           ))}
         </div>
       )}
-    </section>
+    </details>
   );
 }
 
