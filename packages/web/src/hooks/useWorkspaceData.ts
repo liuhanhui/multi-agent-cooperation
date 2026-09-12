@@ -12,6 +12,8 @@ import type {
   EvidenceHit,
   FeatureStage,
   HealthResponse,
+  HubSettingsDocument,
+  RoutingPolicy,
   SkillSummary,
   TargetReceipt,
   Thread,
@@ -41,12 +43,14 @@ import {
   fetchEvidenceList,
   fetchHealth,
   fetchLaneDispositions,
+  fetchSettings,
   fetchSkill,
   fetchSkills,
   fetchThreadReceipts,
   fetchThreads,
   fetchTools,
   holdBall,
+  patchRoutingPolicy,
   patchThreadMembers,
   searchEvidence,
   submitApproval,
@@ -129,6 +133,9 @@ export interface UseWorkspaceDataResult {
     choice: ApprovalChoice;
     note?: string;
   }) => Promise<void>;
+  hubSettings: HubSettingsDocument | null;
+  refreshSettings: () => Promise<void>;
+  patchHubRouting: (patch: Partial<RoutingPolicy>) => Promise<void>;
   activeId: string | null;
   setActiveId: (id: string | null) => void;
   title: string;
@@ -171,6 +178,7 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
   >([]);
   const [pendingApprovals, setPendingApprovals] = useState<ApprovalRequest[]>([]);
   const [approvalLedger, setApprovalLedger] = useState<ApprovalRequest[]>([]);
+  const [hubSettings, setHubSettings] = useState<HubSettingsDocument | null>(null);
   const [activeId, setActiveId] = useState<string | null>(() => readActiveThreadId());
   const [title, setTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -251,6 +259,14 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
     setApprovalLedger(all.filter((a) => a.status !== "pending"));
   }, []);
 
+  /**
+   * Reload Hub Settings document (nav + accounts + routing + usage).
+   */
+  const refreshSettings = useCallback(async () => {
+    const doc = await fetchSettings();
+    setHubSettings(doc);
+  }, []);
+
   useEffect(() => {
     void refreshReceipts().catch((err: unknown) =>
       setError(err instanceof Error ? err.message : String(err)),
@@ -268,6 +284,12 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
       setError(err instanceof Error ? err.message : String(err)),
     );
   }, [refreshApprovals]);
+
+  useEffect(() => {
+    void refreshSettings().catch((err: unknown) =>
+      setError(err instanceof Error ? err.message : String(err)),
+    );
+  }, [refreshSettings]);
 
   useEffect(() => {
     void fetchHealth()
@@ -607,6 +629,21 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
       });
       await refreshApprovals();
       await refreshCustody();
+      await refreshSettings();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  /**
+   * Patch Hub routing policy; applies on the next invoke.
+   * @param patch - Partial RoutingPolicy
+   */
+  async function patchHubRouting(patch: Partial<RoutingPolicy>): Promise<void> {
+    setError(null);
+    try {
+      await patchRoutingPolicy(patch);
+      await refreshSettings();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
@@ -686,6 +723,9 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
     refreshApprovals,
     submitDemoApproval,
     decideHubApproval,
+    hubSettings,
+    refreshSettings,
+    patchHubRouting,
     activeId,
     setActiveId,
     title,

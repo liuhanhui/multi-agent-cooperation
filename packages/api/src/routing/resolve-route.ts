@@ -36,13 +36,17 @@ export interface ResolveMentionRouteParams {
   explicitCatId?: string;
   /** Multi-target policy; only `serial` is implemented in M07. */
   strategy?: MentionRoutingStrategy;
+  /** When false, refuse invoke with no @mention even if defaultCatId exists (M21). */
+  fallbackToDefaultCat?: boolean;
+  /** Cap mention fan-out length (M21 routing policy). */
+  maxTargets?: number;
 }
 
 /**
  * Resolve who should answer an invoke and what prompt they see.
  * Mentions in the leading run win over `explicitCatId`; no mentions fall back
- * to explicitCatId then thread.defaultCatId.
- * @param params - content, thread, cats, optional explicitCatId/strategy
+ * to explicitCatId then thread.defaultCatId (unless fallbackToDefaultCat=false).
+ * @param params - content, thread, cats, optional explicitCatId/strategy/policy
  * @returns ok route with ordered catIds, or ok:false with error
  */
 export function resolveMentionRoute(
@@ -70,12 +74,27 @@ export function resolveMentionRoute(
     catIds = parsed.targets;
     prompt = parsed.prompt;
   } else {
+    const allowFallback = params.fallbackToDefaultCat !== false;
+    if (!allowFallback && !params.explicitCatId) {
+      return {
+        ok: false,
+        error: "Routing policy requires @mention (fallbackToDefaultCat=false)",
+      };
+    }
     const fallback = params.explicitCatId ?? params.thread.defaultCatId;
     if (!fallback) {
       return { ok: false, error: "No default cat configured for this thread" };
     }
     catIds = [fallback];
     prompt = parsed.prompt;
+  }
+
+  const maxTargets = params.maxTargets ?? 32;
+  if (catIds.length > maxTargets) {
+    return {
+      ok: false,
+      error: `Too many @targets (${catIds.length}); maxTargets=${maxTargets}`,
+    };
   }
 
   if (!prompt.trim()) {

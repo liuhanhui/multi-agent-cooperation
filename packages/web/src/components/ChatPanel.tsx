@@ -47,8 +47,10 @@ export function ChatPanel({
   const memberCats = thread.memberIds?.length
     ? cats.filter((c) => thread.memberIds.includes(c.id))
     : cats;
-  const defaultCat = cats.find((c) => c.id === thread.defaultCatId) ?? memberCats[0];
-  const secondCat = memberCats.find((c) => c.id !== defaultCat?.id) ?? memberCats[1];
+  // Stale memberIds (e.g. old thread vs rebuilt registry) would empty the Lead cat list.
+  const leadCats = memberCats.length > 0 ? memberCats : cats;
+  const defaultCat = cats.find((c) => c.id === thread.defaultCatId) ?? leadCats[0];
+  const secondCat = leadCats.find((c) => c.id !== defaultCat?.id) ?? leadCats[1];
 
   return (
     <section className="chat">
@@ -59,13 +61,17 @@ export function ChatPanel({
             id="default-cat"
             value={thread.defaultCatId ?? defaultCat?.id ?? ""}
             onChange={(e) => onDefaultCatChange(e.target.value)}
-            disabled={memberCats.length === 0}
+            disabled={leadCats.length === 0}
           >
-            {memberCats.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.displayName}
-              </option>
-            ))}
+            {leadCats.length === 0 ? (
+              <option value="">No cats loaded</option>
+            ) : (
+              leadCats.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.displayName}
+                </option>
+              ))
+            )}
           </select>
           <button type="button" className="ghost" onClick={onInsertMention} title="Insert @default cat">
             @call

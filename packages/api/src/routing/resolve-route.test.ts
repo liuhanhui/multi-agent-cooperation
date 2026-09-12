@@ -150,3 +150,29 @@ test("parallel strategy is rejected until implemented", () => {
   if (route.ok) return;
   assert.match(route.error, /parallel/i);
 });
+
+test("fallbackToDefaultCat=false requires @mention", () => {
+  const route = resolveMentionRoute({
+    content: "hello without mention",
+    thread: thread(),
+    cats,
+    strategy: "serial",
+    fallbackToDefaultCat: false,
+  });
+  assert.equal(route.ok, false);
+  if (route.ok) return;
+  assert.match(route.error, /fallbackToDefaultCat/);
+});
+
+test("maxTargets caps multi-mention fan-out", () => {
+  const route = resolveMentionRoute({
+    content: "@architect @reviewer please both",
+    thread: thread(),
+    cats,
+    strategy: "serial",
+    maxTargets: 1,
+  });
+  assert.equal(route.ok, false);
+  if (route.ok) return;
+  assert.match(route.error, /maxTargets/);
+});

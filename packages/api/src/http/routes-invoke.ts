@@ -16,7 +16,7 @@ import type { AppDeps } from "./deps.js";
  * @param deps - store/hub/agent/cats/dispatcher
  */
 export function registerInvokeRoutes(app: FastifyInstance, deps: AppDeps): void {
-  const { store, hub, agent, cats, dispatcher, skills, evidence } = deps;
+  const { store, hub, agent, cats, dispatcher, skills, evidence, settings } = deps;
 
   /**
    * Resolve @mention route, then enqueue on InvocationDispatcher (M08).
@@ -43,12 +43,16 @@ export function registerInvokeRoutes(app: FastifyInstance, deps: AppDeps): void 
     if (!content) return reply.code(400).send({ error: "content required" });
 
     const catList = cats?.list() ?? [];
+    const policy = settings?.getRoutingPolicy();
     const route = resolveMentionRoute({
       content,
       thread,
       cats: catList,
       explicitCatId: req.body?.catId,
-      strategy: req.body?.strategy ?? "serial",
+      // Body strategy wins; otherwise Hub Settings routing policy applies immediately.
+      strategy: req.body?.strategy ?? policy?.strategy ?? "serial",
+      fallbackToDefaultCat: policy?.fallbackToDefaultCat,
+      maxTargets: policy?.maxTargets,
     });
     if (!route.ok) {
       return reply.code(400).send({ error: route.error });
@@ -117,6 +121,7 @@ export function registerInvokeRoutes(app: FastifyInstance, deps: AppDeps): void 
     });
 
     const callback = started ? dispatcher.getCallbackCredential(entry.id) : undefined;
+    settings?.recordUsage("invoke");
 
     return reply.code(202).send({
       queueEntryId: entry.id,

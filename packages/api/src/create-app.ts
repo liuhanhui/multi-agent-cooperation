@@ -23,9 +23,11 @@ import { registerWriteLaneRoutes } from "./http/routes-write-lanes.js";
 import { registerReceiptRoutes } from "./http/routes-receipts.js";
 import { registerCustodyRoutes } from "./http/routes-custody.js";
 import { registerApprovalRoutes } from "./http/routes-approvals.js";
+import { registerSettingsRoutes } from "./http/routes-settings.js";
 import { registerWsRoutes } from "./http/routes-ws.js";
 import { ApprovalStore } from "./approval/approval-store.js";
 import { BallCustodyStore } from "./custody/ball-custody-store.js";
+import { HubSettingsStore } from "./settings/hub-settings-store.js";
 import { FeatureStore } from "./features/feature-store.js";
 import { EvidenceStore } from "./memory/evidence-store.js";
 import { WriteLaneService } from "./memory/lanes/write-lane-service.js";
@@ -83,6 +85,10 @@ export interface AppOptions {
   approvals?: ApprovalStore;
   /** Disable approval hub (rare; tests). */
   disableApprovals?: boolean;
+  /** Optional HubSettingsStore (tests). */
+  settings?: HubSettingsStore;
+  /** Disable Hub settings (rare; tests). */
+  disableSettings?: boolean;
 }
 
 /**
@@ -142,6 +148,18 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     opts.approvals ??
     (opts.disableApprovals ? undefined : new ApprovalStore(custodyStore));
 
+  const settingsStore =
+    opts.settings ??
+    (opts.disableSettings
+      ? undefined
+      : new HubSettingsStore({
+          version: opts.version ?? "0.0.1",
+          storeKind: opts.storeKind,
+          cats: opts.cats,
+          skills,
+          tools,
+        }));
+
   const dispatcher = opts.agent
     ? new InvocationDispatcher({
         store: opts.store,
@@ -187,6 +205,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     receipts: receiptStore,
     custody: custodyStore,
     approvals: approvalStore,
+    settings: settingsStore,
   };
 
   // Restart safety: pending/streaming bubbles → failed(orphan-recovered).
@@ -210,6 +229,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   registerReceiptRoutes(app, deps);
   registerCustodyRoutes(app, deps);
   registerApprovalRoutes(app, deps);
+  registerSettingsRoutes(app, deps);
   registerWsRoutes(app, deps);
 
   return app;

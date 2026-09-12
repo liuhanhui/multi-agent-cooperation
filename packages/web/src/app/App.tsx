@@ -13,6 +13,7 @@ import { WriteLanesPanel } from "../components/WriteLanesPanel";
 import { ReceiptsPanel } from "../components/ReceiptsPanel";
 import { BallCustodyPanel } from "../components/BallCustodyPanel";
 import { ApprovalPanel } from "../components/ApprovalPanel";
+import { SettingsPanel } from "../components/SettingsPanel";
 import { useThreadSocket } from "../hooks/useThreadSocket";
 import { useWorkspaceData } from "../hooks/useWorkspaceData";
 
@@ -22,6 +23,7 @@ type CatalogTab =
   | "evidence"
   | "lanes"
   | "receipts"
+  | "settings"
   | "skills"
   | "tools";
 
@@ -70,6 +72,9 @@ export function App() {
     refreshApprovals,
     submitDemoApproval,
     decideHubApproval,
+    hubSettings,
+    refreshSettings,
+    patchHubRouting,
     activeId,
     setActiveId,
     title,
@@ -92,6 +97,7 @@ export function App() {
   const [receiptsBusy, setReceiptsBusy] = useState(false);
   const [custodyBusy, setCustodyBusy] = useState(false);
   const [approvalsBusy, setApprovalsBusy] = useState(false);
+  const [settingsBusy, setSettingsBusy] = useState(false);
   const [catalogTab, setCatalogTab] = useState<CatalogTab>("approvals");
   const messagesEnd = useRef<HTMLDivElement | null>(null);
   const activeThread = threads.find((t) => t.id === activeId) ?? null;
@@ -319,6 +325,7 @@ export function App() {
                 ["evidence", "Memory"],
                 ["lanes", "Lanes"],
                 ["receipts", "Receipts"],
+                ["settings", "Settings"],
                 ["skills", "Skills"],
                 ["tools", "Tools"],
               ] as const
@@ -492,6 +499,29 @@ export function App() {
                     await ackTargetReceipt(receiptId);
                   } finally {
                     setReceiptsBusy(false);
+                  }
+                }}
+              />
+            ) : null}
+
+            {catalogTab === "settings" ? (
+              <SettingsPanel
+                settings={hubSettings}
+                busy={settingsBusy}
+                onRefresh={async () => {
+                  setSettingsBusy(true);
+                  try {
+                    await refreshSettings();
+                  } finally {
+                    setSettingsBusy(false);
+                  }
+                }}
+                onPatchRouting={async (patch) => {
+                  setSettingsBusy(true);
+                  try {
+                    await patchHubRouting(patch);
+                  } finally {
+                    setSettingsBusy(false);
                   }
                 }}
               />

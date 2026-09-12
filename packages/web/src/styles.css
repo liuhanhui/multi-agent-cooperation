@@ -656,9 +656,7 @@ select option {
   min-width: 8rem;
   max-width: 14rem;
   width: auto;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  /* Do not set overflow:hidden on <select> — Windows Chrome clips the selected label away. */
 }
 
 .cat-row select:disabled {
@@ -898,6 +896,15 @@ button.ghost {
   align-items: flex-start;
   font-size: 0.9rem;
   cursor: pointer;
+}
+
+.settings-panel .evidence-form {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.settings-panel .evidence-form input[type="number"] {
+  width: 6rem;
 }
 
 .decision-options {
