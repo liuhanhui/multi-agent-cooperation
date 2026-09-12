@@ -1,4 +1,7 @@
 import type {
+  AwaitSignalKind,
+  BallCustodyProjection,
+  BallHolderKind,
   BulletinBoard,
   CatConfig,
   DeliveryBatch,
@@ -345,4 +348,99 @@ export async function ackReceipt(receiptId: string): Promise<TargetReceipt> {
     { method: "POST" },
   );
   return data.receipt;
+}
+
+/**
+ * GET /api/custody — ball custody projections (M19).
+ * @returns Projection list (custody triple each)
+ */
+export async function fetchCustody(): Promise<BallCustodyProjection[]> {
+  const data = await apiJson<{ projections: BallCustodyProjection[] }>("/api/custody");
+  return data.projections;
+}
+
+/**
+ * POST /api/custody/:type/:id/hold — pass the ball.
+ * @param input - Subject + holder
+ * @returns Updated projection
+ */
+export async function holdBall(input: {
+  subjectType: "thread" | "feature";
+  subjectId: string;
+  holderId: string | null;
+  holderKind: BallHolderKind;
+}): Promise<BallCustodyProjection> {
+  const data = await apiJson<{ projection: BallCustodyProjection }>(
+    `/api/custody/${input.subjectType}/${input.subjectId}/hold`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        holderId: input.holderId,
+        holderKind: input.holderKind,
+      }),
+    },
+  );
+  return data.projection;
+}
+
+/**
+ * POST /api/custody/:type/:id/wait — begin signal wait.
+ * @param input - Subject + signal contract
+ * @returns Updated projection
+ */
+export async function beginCustodyWait(input: {
+  subjectType: "thread" | "feature";
+  subjectId: string;
+  signalKind: AwaitSignalKind;
+  condition: string;
+  expiresAt?: string | null;
+}): Promise<BallCustodyProjection> {
+  const data = await apiJson<{ projection: BallCustodyProjection }>(
+    `/api/custody/${input.subjectType}/${input.subjectId}/wait`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        signalKind: input.signalKind,
+        condition: input.condition,
+        expiresAt: input.expiresAt ?? null,
+      }),
+    },
+  );
+  return data.projection;
+}
+
+/**
+ * POST /api/awaits/:id/wake — mock/external wake.
+ * @param awaitId - Await id
+ * @param payload - Optional wake payload
+ * @returns Updated projection
+ */
+export async function wakeAwait(
+  awaitId: string,
+  payload: Record<string, unknown> = {},
+): Promise<BallCustodyProjection> {
+  const data = await apiJson<{ projection: BallCustodyProjection }>(
+    `/api/awaits/${awaitId}/wake`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+  );
+  return data.projection;
+}
+
+/**
+ * POST /api/awaits/:id/cancel — cancel open wait.
+ * @param awaitId - Await id
+ * @returns Updated projection
+ */
+export async function cancelAwait(awaitId: string): Promise<BallCustodyProjection> {
+  const data = await apiJson<{ projection: BallCustodyProjection }>(
+    `/api/awaits/${awaitId}/cancel`,
+    { method: "POST" },
+  );
+  return data.projection;
 }

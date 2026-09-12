@@ -101,4 +101,15 @@ export {
   type TargetReceipt,
   type TargetReceiptStatus,
 } from "./types/receipt.js";
+export {
+  assertCustodyTriple,
+  deriveCustodyMode,
+  type AwaitSignalKind,
+  type AwaitState,
+  type AwaitStatus,
+  type BallCustodyMode,
+  type BallCustodyProjection,
+  type BallHolderKind,
+  type BallSubjectType,
+} from "./types/ball-custody.js";
 

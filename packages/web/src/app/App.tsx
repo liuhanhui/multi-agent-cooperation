@@ -11,10 +11,11 @@ import { ToolsPanel } from "../components/ToolsPanel";
 import { ThreadSidebar } from "../components/ThreadSidebar";
 import { WriteLanesPanel } from "../components/WriteLanesPanel";
 import { ReceiptsPanel } from "../components/ReceiptsPanel";
+import { BallCustodyPanel } from "../components/BallCustodyPanel";
 import { useThreadSocket } from "../hooks/useThreadSocket";
 import { useWorkspaceData } from "../hooks/useWorkspaceData";
 
-type CatalogTab = "evidence" | "lanes" | "receipts" | "skills" | "tools";
+type CatalogTab = "evidence" | "lanes" | "receipts" | "ball" | "skills" | "tools";
 
 /**
  * Chat shell: warm three-cat lounge layout over workspace data + WS bubbles.
@@ -49,6 +50,12 @@ export function App() {
     refreshReceipts,
     supplementReceipt,
     ackTargetReceipt,
+    custodyProjections,
+    refreshCustody,
+    holdThreadBall,
+    waitThreadBall,
+    wakeBallAwait,
+    cancelBallAwait,
     activeId,
     setActiveId,
     title,
@@ -69,7 +76,8 @@ export function App() {
   const [evidenceBusy, setEvidenceBusy] = useState(false);
   const [lanesBusy, setLanesBusy] = useState(false);
   const [receiptsBusy, setReceiptsBusy] = useState(false);
-  const [catalogTab, setCatalogTab] = useState<CatalogTab>("evidence");
+  const [custodyBusy, setCustodyBusy] = useState(false);
+  const [catalogTab, setCatalogTab] = useState<CatalogTab>("ball");
   const messagesEnd = useRef<HTMLDivElement | null>(null);
   const activeThread = threads.find((t) => t.id === activeId) ?? null;
 
@@ -196,6 +204,14 @@ export function App() {
             receipts <strong>{receiptCount}</strong>
           </span>
           <span className="pill">
+            ball{" "}
+            <strong>
+              {custodyProjections.find((p) => p.mode !== "idle")?.holderId ??
+                custodyProjections[0]?.holderId ??
+                "—"}
+            </strong>
+          </span>
+          <span className="pill">
             ws <strong>{wsState}</strong>
           </span>
         </div>
@@ -280,6 +296,7 @@ export function App() {
           <div className="catalog-tabs" role="tablist" aria-label="Shelf tabs">
             {(
               [
+                ["ball", "Ball"],
                 ["evidence", "Memory"],
                 ["lanes", "Lanes"],
                 ["receipts", "Receipts"],
@@ -301,6 +318,55 @@ export function App() {
           </div>
 
           <div className="catalog-pane" role="tabpanel">
+            {catalogTab === "ball" ? (
+              <BallCustodyPanel
+                projections={custodyProjections}
+                cats={cats}
+                activeThreadId={activeId}
+                busy={custodyBusy}
+                onRefresh={async () => {
+                  setCustodyBusy(true);
+                  try {
+                    await refreshCustody();
+                  } finally {
+                    setCustodyBusy(false);
+                  }
+                }}
+                onHold={async (input) => {
+                  setCustodyBusy(true);
+                  try {
+                    await holdThreadBall(input);
+                  } finally {
+                    setCustodyBusy(false);
+                  }
+                }}
+                onWait={async (input) => {
+                  setCustodyBusy(true);
+                  try {
+                    await waitThreadBall(input);
+                  } finally {
+                    setCustodyBusy(false);
+                  }
+                }}
+                onWake={async (awaitId) => {
+                  setCustodyBusy(true);
+                  try {
+                    await wakeBallAwait(awaitId);
+                  } finally {
+                    setCustodyBusy(false);
+                  }
+                }}
+                onCancel={async (awaitId) => {
+                  setCustodyBusy(true);
+                  try {
+                    await cancelBallAwait(awaitId);
+                  } finally {
+                    setCustodyBusy(false);
+                  }
+                }}
+              />
+            ) : null}
+
             {catalogTab === "evidence" ? (
               <EvidencePanel
                 evidence={evidenceList}

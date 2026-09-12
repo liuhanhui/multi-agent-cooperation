@@ -25,7 +25,7 @@ Why: one sentence
 | `mcp-surface-governance` | active | MCP tool identity, exposure tiers, callback bridge | M13 |
 | `portable-governance` | active | Light SOP / Mission Hub (FeatureStore + bulletin) | M15 |
 | `memory` | active | Evidence SQLite + BM25 + write lanes (decision/profile/event) | M16 / M17 |
-| `ball-custody` | planned | Who holds the ball / wait contracts | M19 |
+| `ball-custody` | active | Who holds the ball / wait contracts + mock wake | M19 |
 | `approval-index` | planned | Human approval aggregation | M20 |
 | `plugin` | planned | Extensibility host | M23 |
 
