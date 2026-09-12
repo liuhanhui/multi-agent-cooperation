@@ -520,7 +520,8 @@ body::before {
 .catalog-rail .tools-panel,
 .catalog-rail .evidence-panel,
 .catalog-rail .write-lanes-panel,
-.catalog-rail .receipts-panel {
+.catalog-rail .receipts-panel,
+.catalog-rail .custody-panel {
   flex: 0 0 auto;
   border: 0;
   background: transparent;
@@ -548,6 +549,7 @@ body::before {
 .composer input,
 .evidence-form input,
 .evidence-form textarea,
+.evidence-form select,
 .mission-create input,
 .mission-create select {
   flex: 1;
@@ -561,10 +563,53 @@ body::before {
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
+/* Lounge selects — hide OS chrome everywhere (Ball, Lanes, Mission, Chat). */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  width: 100%;
+  max-width: 100%;
+  background-color: #fff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%237a6a60' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.7rem center;
+  background-size: 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 0.7rem;
+  color: var(--ink);
+  padding: 0.55rem 1.85rem 0.55rem 0.7rem;
+  font: inherit;
+  line-height: 1.25;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+select:hover:not(:disabled) {
+  border-color: rgba(47, 158, 143, 0.4);
+}
+
+select:focus {
+  outline: none;
+  border-color: rgba(47, 158, 143, 0.55);
+  box-shadow: 0 0 0 3px rgba(47, 158, 143, 0.15);
+}
+
+select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+select option {
+  background: #fff;
+  color: var(--ink);
+}
+
 .row input:focus,
 .composer input:focus,
 .evidence-form input:focus,
 .evidence-form textarea:focus,
+.evidence-form select:focus,
 .mission-create input:focus,
 .mission-create select:focus {
   outline: none;
@@ -609,32 +654,15 @@ body::before {
   flex: 1 1 auto;
   min-width: 8rem;
   max-width: 14rem;
-  appearance: none;
-  -webkit-appearance: none;
-  background-color: #fff;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%237a6a60' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.55rem center;
-  background-size: 0.7rem;
-  border: 1px solid var(--line);
-  border-radius: 0.7rem;
-  color: var(--ink);
-  padding: 0.5rem 1.75rem 0.5rem 0.65rem;
-  line-height: 1.25;
+  width: auto;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font: inherit;
 }
 
 .cat-row select:disabled {
   opacity: 0.55;
   cursor: not-allowed;
-}
-
-.cat-row select option {
-  background: #fff;
-  color: var(--ink);
 }
 
 .cat-row .ghost {
@@ -1100,6 +1128,7 @@ button.ghost {
 .mission-create select {
   flex: 1 1 8rem;
   min-width: 7rem;
+  width: auto;
 }
 
 .mission-columns {

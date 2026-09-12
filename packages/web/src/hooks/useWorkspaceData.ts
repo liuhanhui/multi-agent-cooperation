@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type {
+  BallCustodyProjection,
   BulletinBoard,
   CatConfig,
   DeliveryBatch,
@@ -14,17 +15,22 @@ import type {
   WriteDispositionChoice,
   WriteLaneId,
   WriteLaneResult,
+  AwaitSignalKind,
+  BallHolderKind,
 } from "@mac/shared";
 import {
   advanceFeature,
   ackReceipt,
   appendReceiptSupplement,
+  beginCustodyWait,
   bindFeatureThread,
+  cancelAwait,
   createEvidence,
   createFeature,
   createThread as createThreadRequest,
   fetchBulletin,
   fetchCats,
+  fetchCustody,
   fetchEvidenceList,
   fetchHealth,
   fetchLaneDispositions,
@@ -33,8 +39,10 @@ import {
   fetchThreadReceipts,
   fetchThreads,
   fetchTools,
+  holdBall,
   patchThreadMembers,
   searchEvidence,
+  wakeAwait,
   writeLane,
 } from "../api/endpoints";
 import {
@@ -87,6 +95,22 @@ export interface UseWorkspaceDataResult {
   refreshReceipts: () => Promise<void>;
   supplementReceipt: (receiptId: string, content: string) => Promise<void>;
   ackTargetReceipt: (receiptId: string) => Promise<void>;
+  custodyProjections: BallCustodyProjection[];
+  refreshCustody: () => Promise<void>;
+  holdThreadBall: (input: {
+    subjectType: "thread" | "feature";
+    subjectId: string;
+    holderId: string | null;
+    holderKind: BallHolderKind;
+  }) => Promise<void>;
+  waitThreadBall: (input: {
+    subjectType: "thread" | "feature";
+    subjectId: string;
+    signalKind: AwaitSignalKind;
+    condition: string;
+  }) => Promise<void>;
+  wakeBallAwait: (awaitId: string) => Promise<void>;
+  cancelBallAwait: (awaitId: string) => Promise<void>;
   activeId: string | null;
   setActiveId: (id: string | null) => void;
   title: string;
@@ -99,8 +123,8 @@ export interface UseWorkspaceDataResult {
 }
 
 /**
- * Load health/cats/threads/skills/tools/bulletin/evidence/receipts and own sidebar selection.
- * Cell: thread-navigation + identity-session + hub-action-surface + portable-governance + memory + bubble-pipeline.
+ * Load health/cats/threads/skills/tools/bulletin/evidence/receipts/custody and own sidebar selection.
+ * Cell: thread-navigation + identity-session + hub-action-surface + portable-governance + memory + bubble-pipeline + ball-custody.
  * @returns Workspace list state and mutators used by the chat shell
  */
 export function useWorkspaceData(): UseWorkspaceDataResult {
@@ -121,6 +145,9 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
   const [receiptBatches, setReceiptBatches] = useState<
     Array<{ batch: DeliveryBatch; receipts: TargetReceipt[] }>
   >([]);
+  const [custodyProjections, setCustodyProjections] = useState<BallCustodyProjection[]>(
+    [],
+  );
   const [activeId, setActiveId] = useState<string | null>(() => readActiveThreadId());
   const [title, setTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -179,11 +206,25 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
     setReceiptBatches(batches);
   }, [activeId]);
 
+  /**
+   * Reload ball-custody projections (who holds the ball).
+   */
+  const refreshCustody = useCallback(async () => {
+    const list = await fetchCustody();
+    setCustodyProjections(list);
+  }, []);
+
   useEffect(() => {
     void refreshReceipts().catch((err: unknown) =>
       setError(err instanceof Error ? err.message : String(err)),
     );
   }, [refreshReceipts]);
+
+  useEffect(() => {
+    void refreshCustody().catch((err: unknown) =>
+      setError(err instanceof Error ? err.message : String(err)),
+    );
+  }, [refreshCustody]);
 
   useEffect(() => {
     void fetchHealth()
@@ -404,6 +445,72 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
   }
 
   /**
+   * Pass the ball to a holder; refresh custody list.
+   * @param input - Subject + holder
+   */
+  async function holdThreadBall(input: {
+    subjectType: "thread" | "feature";
+    subjectId: string;
+    holderId: string | null;
+    holderKind: BallHolderKind;
+  }): Promise<void> {
+    setError(null);
+    try {
+      await holdBall(input);
+      await refreshCustody();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  /**
+   * Begin a signal wait on a subject; refresh custody.
+   * @param input - Wait contract
+   */
+  async function waitThreadBall(input: {
+    subjectType: "thread" | "feature";
+    subjectId: string;
+    signalKind: AwaitSignalKind;
+    condition: string;
+  }): Promise<void> {
+    setError(null);
+    try {
+      await beginCustodyWait(input);
+      await refreshCustody();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  /**
+   * Mock/external wake for an await id.
+   * @param awaitId - Await id
+   */
+  async function wakeBallAwait(awaitId: string): Promise<void> {
+    setError(null);
+    try {
+      await wakeAwait(awaitId, { source: "hub" });
+      await refreshCustody();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  /**
+   * Cancel an open await.
+   * @param awaitId - Await id
+   */
+  async function cancelBallAwait(awaitId: string): Promise<void> {
+    setError(null);
+    try {
+      await cancelAwait(awaitId);
+      await refreshCustody();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  /**
    * Create a thread from the sidebar title field and select it.
    */
   async function createThread(): Promise<void> {
@@ -465,6 +572,12 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
     refreshReceipts,
     supplementReceipt,
     ackTargetReceipt,
+    custodyProjections,
+    refreshCustody,
+    holdThreadBall,
+    waitThreadBall,
+    wakeBallAwait,
+    cancelBallAwait,
     activeId,
     setActiveId,
     title,

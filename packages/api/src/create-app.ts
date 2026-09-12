@@ -21,7 +21,9 @@ import { registerThreadRoutes } from "./http/routes-threads.js";
 import { registerToolRoutes } from "./http/routes-tools.js";
 import { registerWriteLaneRoutes } from "./http/routes-write-lanes.js";
 import { registerReceiptRoutes } from "./http/routes-receipts.js";
+import { registerCustodyRoutes } from "./http/routes-custody.js";
 import { registerWsRoutes } from "./http/routes-ws.js";
+import { BallCustodyStore } from "./custody/ball-custody-store.js";
 import { FeatureStore } from "./features/feature-store.js";
 import { EvidenceStore } from "./memory/evidence-store.js";
 import { WriteLaneService } from "./memory/lanes/write-lane-service.js";
@@ -71,6 +73,10 @@ export interface AppOptions {
   receipts?: ReceiptStore;
   /** Disable receipt tracking (rare; tests). */
   disableReceipts?: boolean;
+  /** Optional BallCustodyStore (tests). */
+  custody?: BallCustodyStore;
+  /** Disable ball custody (rare; tests). */
+  disableCustody?: boolean;
 }
 
 /**
@@ -123,6 +129,9 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   const receiptStore =
     opts.receipts ?? (opts.disableReceipts ? undefined : new ReceiptStore());
 
+  const custodyStore =
+    opts.custody ?? (opts.disableCustody ? undefined : new BallCustodyStore());
+
   const dispatcher = opts.agent
     ? new InvocationDispatcher({
         store: opts.store,
@@ -166,6 +175,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     evidence: evidenceStore,
     writeLanes: writeLaneService,
     receipts: receiptStore,
+    custody: custodyStore,
   };
 
   // Restart safety: pending/streaming bubbles → failed(orphan-recovered).
@@ -187,6 +197,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   registerEvidenceRoutes(app, deps);
   registerWriteLaneRoutes(app, deps);
   registerReceiptRoutes(app, deps);
+  registerCustodyRoutes(app, deps);
   registerWsRoutes(app, deps);
 
   return app;
