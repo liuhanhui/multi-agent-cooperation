@@ -12,10 +12,18 @@ import { ThreadSidebar } from "../components/ThreadSidebar";
 import { WriteLanesPanel } from "../components/WriteLanesPanel";
 import { ReceiptsPanel } from "../components/ReceiptsPanel";
 import { BallCustodyPanel } from "../components/BallCustodyPanel";
+import { ApprovalPanel } from "../components/ApprovalPanel";
 import { useThreadSocket } from "../hooks/useThreadSocket";
 import { useWorkspaceData } from "../hooks/useWorkspaceData";
 
-type CatalogTab = "evidence" | "lanes" | "receipts" | "ball" | "skills" | "tools";
+type CatalogTab =
+  | "approvals"
+  | "ball"
+  | "evidence"
+  | "lanes"
+  | "receipts"
+  | "skills"
+  | "tools";
 
 /**
  * Chat shell: warm three-cat lounge layout over workspace data + WS bubbles.
@@ -56,6 +64,12 @@ export function App() {
     waitThreadBall,
     wakeBallAwait,
     cancelBallAwait,
+    approvalProducers,
+    pendingApprovals,
+    approvalLedger,
+    refreshApprovals,
+    submitDemoApproval,
+    decideHubApproval,
     activeId,
     setActiveId,
     title,
@@ -77,7 +91,8 @@ export function App() {
   const [lanesBusy, setLanesBusy] = useState(false);
   const [receiptsBusy, setReceiptsBusy] = useState(false);
   const [custodyBusy, setCustodyBusy] = useState(false);
-  const [catalogTab, setCatalogTab] = useState<CatalogTab>("ball");
+  const [approvalsBusy, setApprovalsBusy] = useState(false);
+  const [catalogTab, setCatalogTab] = useState<CatalogTab>("approvals");
   const messagesEnd = useRef<HTMLDivElement | null>(null);
   const activeThread = threads.find((t) => t.id === activeId) ?? null;
 
@@ -212,6 +227,9 @@ export function App() {
             </strong>
           </span>
           <span className="pill">
+            approvals <strong>{pendingApprovals.length}</strong>
+          </span>
+          <span className="pill">
             ws <strong>{wsState}</strong>
           </span>
         </div>
@@ -296,6 +314,7 @@ export function App() {
           <div className="catalog-tabs" role="tablist" aria-label="Shelf tabs">
             {(
               [
+                ["approvals", "Approvals"],
                 ["ball", "Ball"],
                 ["evidence", "Memory"],
                 ["lanes", "Lanes"],
@@ -318,6 +337,39 @@ export function App() {
           </div>
 
           <div className="catalog-pane" role="tabpanel">
+            {catalogTab === "approvals" ? (
+              <ApprovalPanel
+                producers={approvalProducers}
+                pending={pendingApprovals}
+                ledger={approvalLedger}
+                busy={approvalsBusy}
+                onRefresh={async () => {
+                  setApprovalsBusy(true);
+                  try {
+                    await refreshApprovals();
+                  } finally {
+                    setApprovalsBusy(false);
+                  }
+                }}
+                onSubmitDemo={async (producerId) => {
+                  setApprovalsBusy(true);
+                  try {
+                    await submitDemoApproval(producerId);
+                  } finally {
+                    setApprovalsBusy(false);
+                  }
+                }}
+                onDecide={async (input) => {
+                  setApprovalsBusy(true);
+                  try {
+                    await decideHubApproval(input);
+                  } finally {
+                    setApprovalsBusy(false);
+                  }
+                }}
+              />
+            ) : null}
+
             {catalogTab === "ball" ? (
               <BallCustodyPanel
                 projections={custodyProjections}

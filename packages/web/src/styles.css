@@ -521,7 +521,8 @@ body::before {
 .catalog-rail .evidence-panel,
 .catalog-rail .write-lanes-panel,
 .catalog-rail .receipts-panel,
-.catalog-rail .custody-panel {
+.catalog-rail .custody-panel,
+.catalog-rail .approval-panel {
   flex: 0 0 auto;
   border: 0;
   background: transparent;

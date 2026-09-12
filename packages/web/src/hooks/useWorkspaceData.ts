@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import type {
+  ApprovalChoice,
+  ApprovalProducerCatalogEntry,
+  ApprovalProducerId,
+  ApprovalRequest,
   BallCustodyProjection,
   BulletinBoard,
   CatConfig,
@@ -28,6 +32,9 @@ import {
   createEvidence,
   createFeature,
   createThread as createThreadRequest,
+  decideApproval,
+  fetchApprovalProducers,
+  fetchApprovals,
   fetchBulletin,
   fetchCats,
   fetchCustody,
@@ -42,6 +49,7 @@ import {
   holdBall,
   patchThreadMembers,
   searchEvidence,
+  submitApproval,
   wakeAwait,
   writeLane,
 } from "../api/endpoints";
@@ -111,6 +119,16 @@ export interface UseWorkspaceDataResult {
   }) => Promise<void>;
   wakeBallAwait: (awaitId: string) => Promise<void>;
   cancelBallAwait: (awaitId: string) => Promise<void>;
+  approvalProducers: ApprovalProducerCatalogEntry[];
+  pendingApprovals: ApprovalRequest[];
+  approvalLedger: ApprovalRequest[];
+  refreshApprovals: () => Promise<void>;
+  submitDemoApproval: (producerId: ApprovalProducerId) => Promise<void>;
+  decideHubApproval: (input: {
+    id: string;
+    choice: ApprovalChoice;
+    note?: string;
+  }) => Promise<void>;
   activeId: string | null;
   setActiveId: (id: string | null) => void;
   title: string;
@@ -148,6 +166,11 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
   const [custodyProjections, setCustodyProjections] = useState<BallCustodyProjection[]>(
     [],
   );
+  const [approvalProducers, setApprovalProducers] = useState<
+    ApprovalProducerCatalogEntry[]
+  >([]);
+  const [pendingApprovals, setPendingApprovals] = useState<ApprovalRequest[]>([]);
+  const [approvalLedger, setApprovalLedger] = useState<ApprovalRequest[]>([]);
   const [activeId, setActiveId] = useState<string | null>(() => readActiveThreadId());
   const [title, setTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -214,6 +237,20 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
     setCustodyProjections(list);
   }, []);
 
+  /**
+   * Reload Approval Hub catalog + pending + recent ledger.
+   */
+  const refreshApprovals = useCallback(async () => {
+    const [producers, pending, all] = await Promise.all([
+      fetchApprovalProducers(),
+      fetchApprovals("pending"),
+      fetchApprovals(),
+    ]);
+    setApprovalProducers(producers);
+    setPendingApprovals(pending);
+    setApprovalLedger(all.filter((a) => a.status !== "pending"));
+  }, []);
+
   useEffect(() => {
     void refreshReceipts().catch((err: unknown) =>
       setError(err instanceof Error ? err.message : String(err)),
@@ -225,6 +262,12 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
       setError(err instanceof Error ? err.message : String(err)),
     );
   }, [refreshCustody]);
+
+  useEffect(() => {
+    void refreshApprovals().catch((err: unknown) =>
+      setError(err instanceof Error ? err.message : String(err)),
+    );
+  }, [refreshApprovals]);
 
   useEffect(() => {
     void fetchHealth()
@@ -511,6 +554,65 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
   }
 
   /**
+   * Seed a demo approval for Hub producer catalog practice.
+   * @param producerId - memory_write | handoff
+   */
+  async function submitDemoApproval(producerId: ApprovalProducerId): Promise<void> {
+    setError(null);
+    try {
+      if (producerId === "memory_write") {
+        await submitApproval({
+          producerId,
+          subjectType: "lane",
+          subjectId: activeId
+            ? `decision_lesson:thread:${activeId.slice(0, 8)}`
+            : "decision_lesson:demo.subject",
+          title: "Approve memory write",
+          summary: "Demo lane write needs human disposition before accept.",
+          payload: { lane: "decision_lesson" },
+          requestedBy: "architect",
+        });
+      } else {
+        await submitApproval({
+          producerId,
+          subjectType: "handoff",
+          subjectId: `handoff-demo-${Date.now()}`,
+          title: "Approve A2A handoff",
+          summary: "Demo cross-cat handoff waiting for operator yes.",
+          payload: { kind: "review" },
+          requestedBy: "architect",
+        });
+      }
+      await refreshApprovals();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  /**
+   * Decide on the Approval Hub only (approve|reject).
+   * @param input - Request id + choice
+   */
+  async function decideHubApproval(input: {
+    id: string;
+    choice: ApprovalChoice;
+    note?: string;
+  }): Promise<void> {
+    setError(null);
+    try {
+      await decideApproval(input.id, {
+        choice: input.choice,
+        actorId: "operator",
+        note: input.note,
+      });
+      await refreshApprovals();
+      await refreshCustody();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  /**
    * Create a thread from the sidebar title field and select it.
    */
   async function createThread(): Promise<void> {
@@ -578,6 +680,12 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
     waitThreadBall,
     wakeBallAwait,
     cancelBallAwait,
+    approvalProducers,
+    pendingApprovals,
+    approvalLedger,
+    refreshApprovals,
+    submitDemoApproval,
+    decideHubApproval,
     activeId,
     setActiveId,
     title,
