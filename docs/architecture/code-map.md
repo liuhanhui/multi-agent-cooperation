@@ -16,6 +16,7 @@ Structure cleanup (`chore/structure-align-cells`): keep Fastify + React; align f
 | `receipts/` + `http/routes-receipts.ts` | bubble-pipeline + dispatch | Per-target receipts + freshness (no late overwrite) |
 | `custody/` + `http/routes-custody.ts` | ball-custody | Ball projection + AwaitState hold/wait/wake |
 | `approval/` + `http/routes-approvals.ts` | approval-index | Approval Hub ingress + decide ledger |
+| `settings/` + `http/routes-settings.ts` | hub-action-surface + routing-context | Hub Settings document + routing policy PATCH |
 | `callback-auth/` | callback-auth | InvocationCredentialStore + bearer verify |
 | `http/routes-callbacks.ts` | callback-auth | Agent callback ingress + auth-failures |
 | `routing/` | routing-context | mention → catIds policy |
@@ -51,6 +52,7 @@ Structure cleanup (`chore/structure-align-cells`): keep Fastify + React; align f
 | `components/ReceiptsPanel.tsx` | bubble-pipeline + dispatch | Per-target receipt browse / supplement / ack |
 | `components/BallCustodyPanel.tsx` | ball-custody | Who holds the ball + wait / mock wake |
 | `components/ApprovalPanel.tsx` | approval-index | Human approve/reject + producer demos |
+| `components/SettingsPanel.tsx` | hub-action-surface + routing-context | Settings nav + accounts + Rules routing |
 | `components/` | presentation | Sidebar / ChatPanel / Bubble / Skills / Tools |
 
 ## Shared (`packages/shared/src`)
@@ -64,6 +66,7 @@ Structure cleanup (`chore/structure-align-cells`): keep Fastify + React; align f
 | `types/receipt.ts` | DeliveryBatch / TargetReceipt / freshness helpers |
 | `types/ball-custody.ts` | BallCustodyProjection / AwaitState / custody triple |
 | `types/approval.ts` | ApprovalIngress / Request / producer catalog |
+| `types/hub-settings.ts` | HubSettingsDocument / RoutingPolicy / provider accounts |
 | `mention.ts` | `parseMentions` (routing authority shared with API) |
 | `index.ts` | Barrel re-exports only |
 

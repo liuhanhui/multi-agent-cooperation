@@ -15,7 +15,9 @@ import type {
   FeatureStage,
   HealthResponse,
   HubBlockAction,
+  HubSettingsDocument,
   Message,
+  RoutingPolicy,
   SkillDetail,
   SkillSummary,
   TargetReceipt,
@@ -506,4 +508,29 @@ export async function decideApproval(
     },
   );
   return data.approval;
+}
+
+/**
+ * GET /api/settings — Hub Settings document (M21).
+ * @returns Full settings snapshot (nav + accounts + routing + usage)
+ */
+export async function fetchSettings(): Promise<HubSettingsDocument> {
+  const data = await apiJson<{ settings: HubSettingsDocument }>("/api/settings");
+  return data.settings;
+}
+
+/**
+ * PATCH /api/settings/routing — update routing policy (next invoke).
+ * @param patch - Partial RoutingPolicy fields
+ * @returns Updated policy
+ */
+export async function patchRoutingPolicy(
+  patch: Partial<RoutingPolicy>,
+): Promise<RoutingPolicy> {
+  const data = await apiJson<{ routing: RoutingPolicy }>("/api/settings/routing", {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+  return data.routing;
 }

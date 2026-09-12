@@ -18,10 +18,10 @@ Why: one sentence
 | `identity-session` | active | Cat registry + thread members/defaultCat | M05 |
 | `cli-integration` | active | Claude Code + Codex + Antigravity spawn/stdio → platform events; capability table | M04 / M11 |
 | `thread-navigation` | active (thin) | Sidebar thread list + session restore | M06 |
-| `routing-context` | active (thin) | @mention parse + serial multi-target route | M07 |
+| `routing-context` | active (thin) | @mention parse + serial multi-target route; Hub Settings policy | M07 / M21 |
 | `dispatch` | active | InvocationQueue, busy gate, cancel, orphan reconcile; A2A handoff; receipt batch sync | M08 / M09 / M18 |
 | `callback-auth` | active | Short-lived invocation tokens + callback 401/expiry telemetry | M10 |
-| `hub-action-surface` | active | Skills + rich blocks (checklist/decision) + Hub action write-back | M12 / M14 |
+| `hub-action-surface` | active | Skills + rich blocks + Hub Settings (nav / routing / accounts / ops) | M12 / M14 / M21 |
 | `mcp-surface-governance` | active | MCP tool identity, exposure tiers, callback bridge | M13 |
 | `portable-governance` | active | Light SOP / Mission Hub (FeatureStore + bulletin) | M15 |
 | `memory` | active | Evidence SQLite + BM25 + write lanes (decision/profile/event) | M16 / M17 |

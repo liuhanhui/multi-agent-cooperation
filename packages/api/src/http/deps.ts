@@ -9,6 +9,7 @@ import type { WriteLaneService } from "../memory/lanes/write-lane-service.js";
 import type { ReceiptStore } from "../receipts/receipt-store.js";
 import type { BallCustodyStore } from "../custody/ball-custody-store.js";
 import type { ApprovalStore } from "../approval/approval-store.js";
+import type { HubSettingsStore } from "../settings/hub-settings-store.js";
 import type { ToolRegistry } from "../mcp/tool-registry.js";
 import type { SkillRegistry } from "../skills/skill-registry.js";
 import type { MacStore } from "../store/types.js";
@@ -49,4 +50,6 @@ export interface AppDeps {
   custody?: BallCustodyStore;
   /** M20 Approval Hub — human disposition ledger. */
   approvals?: ApprovalStore;
+  /** M21 Hub Settings — nav tree, routing policy, usage. */
+  settings?: HubSettingsStore;
 }

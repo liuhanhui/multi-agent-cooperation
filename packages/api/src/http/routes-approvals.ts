@@ -12,7 +12,7 @@ import type { AppDeps } from "./deps.js";
  * @param deps - Must include approvals when enabled
  */
 export function registerApprovalRoutes(app: FastifyInstance, deps: AppDeps): void {
-  const { approvals } = deps;
+  const { approvals, settings } = deps;
 
   /**
    * GET /api/approvals/producers — producer catalog.
@@ -75,6 +75,7 @@ export function registerApprovalRoutes(app: FastifyInstance, deps: AppDeps): voi
         actorId: req.body?.actorId ?? "operator",
         note: req.body?.note,
       });
+      settings?.recordUsage("approvalDecide");
       return { approval };
     } catch (err) {
       return reply.code(400).send({
