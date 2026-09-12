@@ -112,4 +112,16 @@ export {
   type BallHolderKind,
   type BallSubjectType,
 } from "./types/ball-custody.js";
+export {
+  APPROVAL_PRODUCER_CATALOG,
+  APPROVAL_PRODUCER_IDS,
+  isApprovalProducerId,
+  type ApprovalChoice,
+  type ApprovalDecisionInput,
+  type ApprovalIngress,
+  type ApprovalProducerCatalogEntry,
+  type ApprovalProducerId,
+  type ApprovalRequest,
+  type ApprovalStatus,
+} from "./types/approval.js";
 

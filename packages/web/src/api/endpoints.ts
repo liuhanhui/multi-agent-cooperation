@@ -1,4 +1,8 @@
 import type {
+  ApprovalChoice,
+  ApprovalIngress,
+  ApprovalProducerCatalogEntry,
+  ApprovalRequest,
   AwaitSignalKind,
   BallCustodyProjection,
   BallHolderKind,
@@ -443,4 +447,63 @@ export async function cancelAwait(awaitId: string): Promise<BallCustodyProjectio
     { method: "POST" },
   );
   return data.projection;
+}
+
+/**
+ * GET /api/approvals/producers — Approval Hub producer catalog (M20).
+ * @returns Producer entries
+ */
+export async function fetchApprovalProducers(): Promise<ApprovalProducerCatalogEntry[]> {
+  const data = await apiJson<{ producers: ApprovalProducerCatalogEntry[] }>(
+    "/api/approvals/producers",
+  );
+  return data.producers;
+}
+
+/**
+ * GET /api/approvals — list approval ledger.
+ * @param status - Optional filter
+ * @returns ApprovalRequest list
+ */
+export async function fetchApprovals(
+  status?: "pending" | "approved" | "rejected",
+): Promise<ApprovalRequest[]> {
+  const q = status ? `?status=${status}` : "";
+  const data = await apiJson<{ approvals: ApprovalRequest[] }>(`/api/approvals${q}`);
+  return data.approvals;
+}
+
+/**
+ * POST /api/approvals — producer ingress.
+ * @param ingress - ApprovalIngress body
+ * @returns Created pending approval
+ */
+export async function submitApproval(ingress: ApprovalIngress): Promise<ApprovalRequest> {
+  const data = await apiJson<{ approval: ApprovalRequest }>("/api/approvals", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(ingress),
+  });
+  return data.approval;
+}
+
+/**
+ * POST /api/approvals/:id/decide — human approve|reject.
+ * @param id - Approval id
+ * @param input - Choice + actor/note
+ * @returns Updated approval (ledger)
+ */
+export async function decideApproval(
+  id: string,
+  input: { choice: ApprovalChoice; actorId?: string; note?: string },
+): Promise<ApprovalRequest> {
+  const data = await apiJson<{ approval: ApprovalRequest }>(
+    `/api/approvals/${id}/decide`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(input),
+    },
+  );
+  return data.approval;
 }

@@ -8,6 +8,7 @@ import type { EvidenceStore } from "../memory/evidence-store.js";
 import type { WriteLaneService } from "../memory/lanes/write-lane-service.js";
 import type { ReceiptStore } from "../receipts/receipt-store.js";
 import type { BallCustodyStore } from "../custody/ball-custody-store.js";
+import type { ApprovalStore } from "../approval/approval-store.js";
 import type { ToolRegistry } from "../mcp/tool-registry.js";
 import type { SkillRegistry } from "../skills/skill-registry.js";
 import type { MacStore } from "../store/types.js";
@@ -46,4 +47,6 @@ export interface AppDeps {
   receipts?: ReceiptStore;
   /** M19 ball custody projection + await contracts. */
   custody?: BallCustodyStore;
+  /** M20 Approval Hub — human disposition ledger. */
+  approvals?: ApprovalStore;
 }
