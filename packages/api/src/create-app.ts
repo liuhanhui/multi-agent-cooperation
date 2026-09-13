@@ -24,9 +24,12 @@ import { registerReceiptRoutes } from "./http/routes-receipts.js";
 import { registerCustodyRoutes } from "./http/routes-custody.js";
 import { registerApprovalRoutes } from "./http/routes-approvals.js";
 import { registerSettingsRoutes } from "./http/routes-settings.js";
+import { registerGithubRoutes } from "./http/routes-github.js";
 import { registerWsRoutes } from "./http/routes-ws.js";
 import { ApprovalStore } from "./approval/approval-store.js";
 import { BallCustodyStore } from "./custody/ball-custody-store.js";
+import { GithubBindingStore } from "./github/binding-store.js";
+import { GithubSignalRouter } from "./github/signal-router.js";
 import { HubSettingsStore } from "./settings/hub-settings-store.js";
 import { FeatureStore } from "./features/feature-store.js";
 import { EvidenceStore } from "./memory/evidence-store.js";
@@ -89,6 +92,12 @@ export interface AppOptions {
   settings?: HubSettingsStore;
   /** Disable Hub settings (rare; tests). */
   disableSettings?: boolean;
+  /** Optional GithubBindingStore (tests). */
+  githubBindings?: GithubBindingStore;
+  /** Optional GithubSignalRouter (tests). */
+  githubSignals?: GithubSignalRouter;
+  /** Disable GitHub signal ingress (rare; tests). */
+  disableGithub?: boolean;
 }
 
 /**
@@ -160,6 +169,10 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
           tools,
         }));
 
+  const githubBindings =
+    opts.githubBindings ??
+    (opts.disableGithub ? undefined : new GithubBindingStore());
+
   const dispatcher = opts.agent
     ? new InvocationDispatcher({
         store: opts.store,
@@ -186,6 +199,17 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     dispatcher.attachHandoffs(handoffs);
   }
 
+  const githubSignals =
+    opts.githubSignals ??
+    (opts.disableGithub || !githubBindings
+      ? undefined
+      : new GithubSignalRouter({
+          bindings: githubBindings,
+          custody: custodyStore,
+          store: opts.store,
+          hub,
+        }));
+
   const deps: AppDeps = {
     store: opts.store,
     hub,
@@ -206,6 +230,8 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     custody: custodyStore,
     approvals: approvalStore,
     settings: settingsStore,
+    githubBindings,
+    githubSignals,
   };
 
   // Restart safety: pending/streaming bubbles → failed(orphan-recovered).
@@ -230,6 +256,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   registerCustodyRoutes(app, deps);
   registerApprovalRoutes(app, deps);
   registerSettingsRoutes(app, deps);
+  registerGithubRoutes(app, deps);
   registerWsRoutes(app, deps);
 
   return app;

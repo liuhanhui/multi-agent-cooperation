@@ -90,6 +90,12 @@ export function registerCustodyRoutes(app: FastifyInstance, deps: AppDeps): void
       signalKind?: AwaitSignalKind;
       condition?: string;
       expiresAt?: string | null;
+      signalRef?: {
+        owner?: string;
+        repo?: string;
+        number?: number;
+        kind?: "pr" | "issue";
+      } | null;
     };
   }>("/api/custody/:subjectType/:subjectId/wait", async (req, reply) => {
     if (!custody) return reply.code(503).send({ error: "Custody not configured" });
@@ -103,6 +109,21 @@ export function registerCustodyRoutes(app: FastifyInstance, deps: AppDeps): void
         error: "signalKind must be github_pr|human_approval|mock",
       });
     }
+    let signalRef = null;
+    if (req.body?.signalRef) {
+      const r = req.body.signalRef;
+      if (!r.owner || !r.repo || !r.number || (r.kind !== "pr" && r.kind !== "issue")) {
+        return reply.code(400).send({
+          error: "signalRef requires owner, repo, number, kind=pr|issue",
+        });
+      }
+      signalRef = {
+        owner: r.owner,
+        repo: r.repo,
+        number: r.number,
+        kind: r.kind,
+      };
+    }
     try {
       const projection = custody.beginWait({
         subjectType,
@@ -110,6 +131,7 @@ export function registerCustodyRoutes(app: FastifyInstance, deps: AppDeps): void
         signalKind,
         condition: req.body?.condition ?? "",
         expiresAt: req.body?.expiresAt ?? null,
+        signalRef,
       });
       return reply.code(201).send({ projection });
     } catch (err) {

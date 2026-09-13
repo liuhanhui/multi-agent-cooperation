@@ -26,6 +26,8 @@ import type {
   WriteDispositionChoice,
   WriteLaneId,
   WriteLaneResult,
+  GithubResourceRef,
+  GithubThreadBinding,
 } from "@mac/shared";
 import { apiJson, apiJsonAccept202 } from "./http";
 
@@ -401,6 +403,7 @@ export async function beginCustodyWait(input: {
   signalKind: AwaitSignalKind;
   condition: string;
   expiresAt?: string | null;
+  signalRef?: GithubResourceRef | null;
 }): Promise<BallCustodyProjection> {
   const data = await apiJson<{ projection: BallCustodyProjection }>(
     `/api/custody/${input.subjectType}/${input.subjectId}/wait`,
@@ -411,6 +414,7 @@ export async function beginCustodyWait(input: {
         signalKind: input.signalKind,
         condition: input.condition,
         expiresAt: input.expiresAt ?? null,
+        signalRef: input.signalRef ?? null,
       }),
     },
   );
@@ -533,4 +537,54 @@ export async function patchRoutingPolicy(
     body: JSON.stringify(patch),
   });
   return data.routing;
+}
+
+/**
+ * GET /api/github/bindings — list GitHub↔thread bindings (M22).
+ * @param threadId - Optional filter
+ * @returns Binding rows
+ */
+export async function fetchGithubBindings(
+  threadId?: string,
+): Promise<GithubThreadBinding[]> {
+  const q = threadId ? `?threadId=${encodeURIComponent(threadId)}` : "";
+  const data = await apiJson<{ bindings: GithubThreadBinding[] }>(
+    `/api/github/bindings${q}`,
+  );
+  return data.bindings;
+}
+
+/**
+ * POST /api/github/bindings — bind thread to PR/issue.
+ * @param input - threadId + ref (+ optional awaitId)
+ * @returns Created/updated binding
+ */
+export async function bindGithubThread(input: {
+  threadId: string;
+  ref: GithubResourceRef;
+  awaitId?: string | null;
+}): Promise<GithubThreadBinding> {
+  const data = await apiJson<{ binding: GithubThreadBinding }>("/api/github/bindings", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return data.binding;
+}
+
+/**
+ * POST /api/github/signals/simulate — Hub/dev wake path (same router as webhook).
+ * @param input - event + ref
+ */
+export async function simulateGithubSignal(input: {
+  event: string;
+  action?: string | null;
+  ref: GithubResourceRef;
+  summary?: string;
+}): Promise<void> {
+  await apiJson("/api/github/signals/simulate", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(input),
+  });
 }

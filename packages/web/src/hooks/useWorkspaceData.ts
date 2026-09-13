@@ -23,6 +23,8 @@ import type {
   WriteLaneResult,
   AwaitSignalKind,
   BallHolderKind,
+  GithubResourceRef,
+  GithubThreadBinding,
 } from "@mac/shared";
 import {
   advanceFeature,
@@ -30,6 +32,7 @@ import {
   appendReceiptSupplement,
   beginCustodyWait,
   bindFeatureThread,
+  bindGithubThread,
   cancelAwait,
   createEvidence,
   createFeature,
@@ -41,6 +44,7 @@ import {
   fetchCats,
   fetchCustody,
   fetchEvidenceList,
+  fetchGithubBindings,
   fetchHealth,
   fetchLaneDispositions,
   fetchSettings,
@@ -53,6 +57,7 @@ import {
   patchRoutingPolicy,
   patchThreadMembers,
   searchEvidence,
+  simulateGithubSignal,
   submitApproval,
   wakeAwait,
   writeLane,
@@ -120,9 +125,23 @@ export interface UseWorkspaceDataResult {
     subjectId: string;
     signalKind: AwaitSignalKind;
     condition: string;
+    signalRef?: GithubResourceRef | null;
   }) => Promise<void>;
   wakeBallAwait: (awaitId: string) => Promise<void>;
   cancelBallAwait: (awaitId: string) => Promise<void>;
+  githubBindings: GithubThreadBinding[];
+  refreshGithubBindings: () => Promise<void>;
+  bindThreadGithub: (input: {
+    threadId: string;
+    ref: GithubResourceRef;
+    awaitId?: string | null;
+  }) => Promise<void>;
+  simulateThreadGithub: (input: {
+    event: string;
+    action?: string | null;
+    ref: GithubResourceRef;
+    summary?: string;
+  }) => Promise<void>;
   approvalProducers: ApprovalProducerCatalogEntry[];
   pendingApprovals: ApprovalRequest[];
   approvalLedger: ApprovalRequest[];
@@ -179,6 +198,7 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
   const [pendingApprovals, setPendingApprovals] = useState<ApprovalRequest[]>([]);
   const [approvalLedger, setApprovalLedger] = useState<ApprovalRequest[]>([]);
   const [hubSettings, setHubSettings] = useState<HubSettingsDocument | null>(null);
+  const [githubBindings, setGithubBindings] = useState<GithubThreadBinding[]>([]);
   const [activeId, setActiveId] = useState<string | null>(() => readActiveThreadId());
   const [title, setTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -267,6 +287,14 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
     setHubSettings(doc);
   }, []);
 
+  /**
+   * Reload GitHub↔thread bindings (M22).
+   */
+  const refreshGithubBindings = useCallback(async () => {
+    const list = await fetchGithubBindings();
+    setGithubBindings(list);
+  }, []);
+
   useEffect(() => {
     void refreshReceipts().catch((err: unknown) =>
       setError(err instanceof Error ? err.message : String(err)),
@@ -290,6 +318,12 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
       setError(err instanceof Error ? err.message : String(err)),
     );
   }, [refreshSettings]);
+
+  useEffect(() => {
+    void refreshGithubBindings().catch((err: unknown) =>
+      setError(err instanceof Error ? err.message : String(err)),
+    );
+  }, [refreshGithubBindings]);
 
   useEffect(() => {
     void fetchHealth()
@@ -537,11 +571,50 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
     subjectId: string;
     signalKind: AwaitSignalKind;
     condition: string;
+    signalRef?: GithubResourceRef | null;
   }): Promise<void> {
     setError(null);
     try {
       await beginCustodyWait(input);
       await refreshCustody();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  /**
+   * Bind open thread to a GitHub PR/issue.
+   * @param input - Binding payload
+   */
+  async function bindThreadGithub(input: {
+    threadId: string;
+    ref: GithubResourceRef;
+    awaitId?: string | null;
+  }): Promise<void> {
+    setError(null);
+    try {
+      await bindGithubThread(input);
+      await refreshGithubBindings();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  /**
+   * Simulate a GitHub webhook through ConnectorRouter (wake + thread note).
+   * @param input - Event + ref
+   */
+  async function simulateThreadGithub(input: {
+    event: string;
+    action?: string | null;
+    ref: GithubResourceRef;
+    summary?: string;
+  }): Promise<void> {
+    setError(null);
+    try {
+      await simulateGithubSignal(input);
+      await refreshCustody();
+      await refreshGithubBindings();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
@@ -717,6 +790,10 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
     waitThreadBall,
     wakeBallAwait,
     cancelBallAwait,
+    githubBindings,
+    refreshGithubBindings,
+    bindThreadGithub,
+    simulateThreadGithub,
     approvalProducers,
     pendingApprovals,
     approvalLedger,

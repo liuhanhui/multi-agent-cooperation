@@ -135,4 +135,12 @@ export {
   type RoutingPolicy,
   type UsageSnapshot,
 } from "./types/hub-settings.js";
+export {
+  formatGithubWakeNote,
+  githubRefKey,
+  githubRefsEqual,
+  type GithubResourceRef,
+  type GithubThreadBinding,
+  type GithubWebhookIngress,
+} from "./types/github-signal.js";
 

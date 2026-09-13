@@ -2,11 +2,13 @@ import { randomUUID } from "node:crypto";
 import {
   assertCustodyTriple,
   deriveCustodyMode,
+  githubRefsEqual,
   type AwaitSignalKind,
   type AwaitState,
   type BallCustodyProjection,
   type BallHolderKind,
   type BallSubjectType,
+  type GithubResourceRef,
 } from "@mac/shared";
 
 export interface HoldBallInput {
@@ -22,6 +24,8 @@ export interface BeginWaitInput {
   signalKind: AwaitSignalKind;
   condition: string;
   expiresAt?: string | null;
+  /** Structured GitHub ref for webhook matching (M22). */
+  signalRef?: GithubResourceRef | null;
 }
 
 interface CustodyRecord {
@@ -123,6 +127,7 @@ export class BallCustodyStore {
       subjectId,
       signalKind: input.signalKind,
       condition,
+      signalRef: input.signalRef ?? null,
       status: "waiting",
       expiresAt: input.expiresAt ?? null,
       wakePayload: null,
@@ -234,6 +239,32 @@ export class BallCustodyStore {
   }
 
   /**
+   * Find an open github_pr wait whose signalRef matches the resource.
+   * @param ref - GitHub PR/issue ref from webhook
+   * @returns Waiting await or undefined
+   */
+  findWaitingByGithubRef(ref: GithubResourceRef): AwaitState | undefined {
+    for (const awaitState of this.awaits.values()) {
+      if (awaitState.status !== "waiting") continue;
+      if (awaitState.signalKind !== "github_pr") continue;
+      if (!awaitState.signalRef) continue;
+      if (githubRefsEqual(awaitState.signalRef, ref)) {
+        return cloneAwait(awaitState);
+      }
+    }
+    return undefined;
+  }
+
+  /**
+   * @param awaitId - Await id
+   * @returns Await clone or undefined
+   */
+  getAwait(awaitId: string): AwaitState | undefined {
+    const hit = this.awaits.get(awaitId);
+    return hit ? cloneAwait(hit) : undefined;
+  }
+
+  /**
    * @param record - Internal record
    * @returns Public projection with custody triple
    */
@@ -303,6 +334,7 @@ function isSignalKind(kind: string): kind is AwaitSignalKind {
 function cloneAwait(awaitState: AwaitState): AwaitState {
   return {
     ...awaitState,
+    signalRef: awaitState.signalRef ? { ...awaitState.signalRef } : awaitState.signalRef,
     wakePayload: awaitState.wakePayload
       ? { ...awaitState.wakePayload }
       : null,
