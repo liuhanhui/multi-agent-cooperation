@@ -14,6 +14,7 @@ import { ReceiptsPanel } from "../components/ReceiptsPanel";
 import { BallCustodyPanel } from "../components/BallCustodyPanel";
 import { ApprovalPanel } from "../components/ApprovalPanel";
 import { SettingsPanel } from "../components/SettingsPanel";
+import { GithubChannelPanel } from "../components/GithubChannelPanel";
 import { useThreadSocket } from "../hooks/useThreadSocket";
 import { useWorkspaceData } from "../hooks/useWorkspaceData";
 
@@ -21,6 +22,7 @@ type CatalogTab =
   | "approvals"
   | "ball"
   | "evidence"
+  | "github"
   | "lanes"
   | "receipts"
   | "settings"
@@ -75,6 +77,10 @@ export function App() {
     hubSettings,
     refreshSettings,
     patchHubRouting,
+    githubBindings,
+    refreshGithubBindings,
+    bindThreadGithub,
+    simulateThreadGithub,
     activeId,
     setActiveId,
     title,
@@ -98,6 +104,7 @@ export function App() {
   const [custodyBusy, setCustodyBusy] = useState(false);
   const [approvalsBusy, setApprovalsBusy] = useState(false);
   const [settingsBusy, setSettingsBusy] = useState(false);
+  const [githubBusy, setGithubBusy] = useState(false);
   const [catalogTab, setCatalogTab] = useState<CatalogTab>("approvals");
   const messagesEnd = useRef<HTMLDivElement | null>(null);
   const activeThread = threads.find((t) => t.id === activeId) ?? null;
@@ -322,6 +329,7 @@ export function App() {
               [
                 ["approvals", "Approvals"],
                 ["ball", "Ball"],
+                ["github", "GitHub"],
                 ["evidence", "Memory"],
                 ["lanes", "Lanes"],
                 ["receipts", "Receipts"],
@@ -421,6 +429,38 @@ export function App() {
                     await cancelBallAwait(awaitId);
                   } finally {
                     setCustodyBusy(false);
+                  }
+                }}
+              />
+            ) : null}
+
+            {catalogTab === "github" ? (
+              <GithubChannelPanel
+                bindings={githubBindings}
+                activeThreadId={activeId}
+                busy={githubBusy}
+                onRefresh={async () => {
+                  setGithubBusy(true);
+                  try {
+                    await refreshGithubBindings();
+                  } finally {
+                    setGithubBusy(false);
+                  }
+                }}
+                onBind={async (input) => {
+                  setGithubBusy(true);
+                  try {
+                    await bindThreadGithub(input);
+                  } finally {
+                    setGithubBusy(false);
+                  }
+                }}
+                onSimulate={async (input) => {
+                  setGithubBusy(true);
+                  try {
+                    await simulateThreadGithub(input);
+                  } finally {
+                    setGithubBusy(false);
                   }
                 }}
               />

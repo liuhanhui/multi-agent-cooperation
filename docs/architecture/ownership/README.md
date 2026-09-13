@@ -27,6 +27,8 @@ Why: one sentence
 | `memory` | active | Evidence SQLite + BM25 + write lanes (decision/profile/event) | M16 / M17 |
 | `ball-custody` | active | Who holds the ball / wait contracts + mock wake | M19 |
 | `approval-index` | active | Human approval aggregation (producer catalog + ledger) | M20 |
+| `github-signals` | active | GitHub PR/issue wait → wake + thread note | M22 |
+| `signal-ingress` | active | Webhook HMAC verify + ConnectorRouter normalize | M22 |
 | `plugin` | planned | Extensibility host | M23 |
 
 Ordinary increments: `Map delta: none`. New boundaries require updating this table before merge.

@@ -8,6 +8,8 @@
  *   3. awaitState (wait contract or null)
  */
 
+import type { GithubResourceRef } from "./github-signal.js";
+
 /** Who may hold the ball. */
 export type BallHolderKind = "cat" | "human" | "system" | "none";
 
@@ -37,6 +39,11 @@ export interface AwaitState {
   signalKind: AwaitSignalKind;
   /** Human-readable wait condition (e.g. "PR #42 review approved"). */
   condition: string;
+  /**
+   * Optional structured GitHub ref for webhook matching (M22).
+   * When set with signalKind=github_pr, ingress can wake without knowing awaitId.
+   */
+  signalRef?: GithubResourceRef | null;
   status: AwaitStatus;
   /** Optional soft deadline; expiry is checked, not "run at time X". */
   expiresAt: string | null;

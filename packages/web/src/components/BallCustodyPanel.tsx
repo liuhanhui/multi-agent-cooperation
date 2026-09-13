@@ -4,6 +4,7 @@ import type {
   BallCustodyProjection,
   BallHolderKind,
   CatConfig,
+  GithubResourceRef,
 } from "@mac/shared";
 
 interface BallCustodyPanelProps {
@@ -23,6 +24,7 @@ interface BallCustodyPanelProps {
     subjectId: string;
     signalKind: AwaitSignalKind;
     condition: string;
+    signalRef?: GithubResourceRef | null;
   }) => Promise<void>;
   onWake: (awaitId: string) => Promise<void>;
   onCancel: (awaitId: string) => Promise<void>;
@@ -50,6 +52,9 @@ export function BallCustodyPanel({
   const [holderId, setHolderId] = useState(cats[0]?.id ?? "");
   const [signalKind, setSignalKind] = useState<AwaitSignalKind>("mock");
   const [condition, setCondition] = useState("Operator mock approval");
+  const [ghOwner, setGhOwner] = useState("acme");
+  const [ghRepo, setGhRepo] = useState("mac");
+  const [ghNumber, setGhNumber] = useState("1");
 
   /**
    * Pass the ball to the selected cat on the active thread.
@@ -69,11 +74,23 @@ export function BallCustodyPanel({
    */
   async function handleWait(): Promise<void> {
     if (!activeThreadId || !condition.trim() || busy) return;
+    let signalRef: GithubResourceRef | null = null;
+    if (signalKind === "github_pr") {
+      const n = Number(ghNumber);
+      if (!ghOwner.trim() || !ghRepo.trim() || !Number.isFinite(n) || n < 1) return;
+      signalRef = {
+        owner: ghOwner.trim(),
+        repo: ghRepo.trim(),
+        number: Math.floor(n),
+        kind: "pr",
+      };
+    }
     await onWait({
       subjectType: "thread",
       subjectId: activeThreadId,
       signalKind,
       condition: condition.trim(),
+      signalRef,
     });
   }
 
@@ -120,6 +137,31 @@ export function BallCustodyPanel({
           placeholder="Wait condition (not a cron)…"
           aria-label="Wait condition"
         />
+        {signalKind === "github_pr" ? (
+          <>
+            <input
+              value={ghOwner}
+              disabled={busy}
+              onChange={(e) => setGhOwner(e.target.value)}
+              placeholder="owner"
+              aria-label="GitHub owner for wait"
+            />
+            <input
+              value={ghRepo}
+              disabled={busy}
+              onChange={(e) => setGhRepo(e.target.value)}
+              placeholder="repo"
+              aria-label="GitHub repo for wait"
+            />
+            <input
+              value={ghNumber}
+              disabled={busy}
+              onChange={(e) => setGhNumber(e.target.value)}
+              placeholder="PR #"
+              aria-label="GitHub PR number for wait"
+            />
+          </>
+        ) : null}
         <button type="button" disabled={busy || !activeThreadId} onClick={() => void handleWait()}>
           Begin wait
         </button>

@@ -10,6 +10,8 @@ import type { ReceiptStore } from "../receipts/receipt-store.js";
 import type { BallCustodyStore } from "../custody/ball-custody-store.js";
 import type { ApprovalStore } from "../approval/approval-store.js";
 import type { HubSettingsStore } from "../settings/hub-settings-store.js";
+import type { GithubBindingStore } from "../github/binding-store.js";
+import type { GithubSignalRouter } from "../github/signal-router.js";
 import type { ToolRegistry } from "../mcp/tool-registry.js";
 import type { SkillRegistry } from "../skills/skill-registry.js";
 import type { MacStore } from "../store/types.js";
@@ -52,4 +54,8 @@ export interface AppDeps {
   approvals?: ApprovalStore;
   /** M21 Hub Settings — nav tree, routing policy, usage. */
   settings?: HubSettingsStore;
+  /** M22 GitHub thread bindings. */
+  githubBindings?: GithubBindingStore;
+  /** M22 GitHub ConnectorRouter (webhook → wake). */
+  githubSignals?: GithubSignalRouter;
 }
