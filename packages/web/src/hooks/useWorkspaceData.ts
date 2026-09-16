@@ -25,18 +25,24 @@ import type {
   BallHolderKind,
   GithubResourceRef,
   GithubThreadBinding,
+  PluginCallReceipt,
+  PluginCatalogEntry,
+  PluginRecord,
 } from "@mac/shared";
 import {
+  activatePlugin,
   advanceFeature,
   ackReceipt,
   appendReceiptSupplement,
   beginCustodyWait,
   bindFeatureThread,
   bindGithubThread,
+  callPlugin,
   cancelAwait,
   createEvidence,
   createFeature,
   createThread as createThreadRequest,
+  deactivatePlugin,
   decideApproval,
   fetchApprovalProducers,
   fetchApprovals,
@@ -47,18 +53,24 @@ import {
   fetchGithubBindings,
   fetchHealth,
   fetchLaneDispositions,
+  fetchPluginCatalog,
+  fetchPlugins,
   fetchSettings,
   fetchSkill,
   fetchSkills,
   fetchThreadReceipts,
   fetchThreads,
   fetchTools,
+  grantPluginCapability,
   holdBall,
+  installPlugin,
   patchRoutingPolicy,
   patchThreadMembers,
+  revokePluginCapability,
   searchEvidence,
   simulateGithubSignal,
   submitApproval,
+  uninstallPlugin,
   wakeAwait,
   writeLane,
 } from "../api/endpoints";
@@ -142,6 +154,21 @@ export interface UseWorkspaceDataResult {
     ref: GithubResourceRef;
     summary?: string;
   }) => Promise<void>;
+  pluginCatalog: PluginCatalogEntry[];
+  pluginRecords: PluginRecord[];
+  pluginReceipts: PluginCallReceipt[];
+  refreshPlugins: () => Promise<void>;
+  installHubPlugin: (id: string) => Promise<void>;
+  uninstallHubPlugin: (id: string) => Promise<void>;
+  activateHubPlugin: (id: string) => Promise<void>;
+  deactivateHubPlugin: (id: string) => Promise<void>;
+  grantHubPlugin: (id: string, capability: string) => Promise<void>;
+  revokeHubPlugin: (id: string, capability: string) => Promise<void>;
+  callHubPlugin: (
+    id: string,
+    capability: string,
+    args?: Record<string, unknown>,
+  ) => Promise<void>;
   approvalProducers: ApprovalProducerCatalogEntry[];
   pendingApprovals: ApprovalRequest[];
   approvalLedger: ApprovalRequest[];
@@ -199,6 +226,9 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
   const [approvalLedger, setApprovalLedger] = useState<ApprovalRequest[]>([]);
   const [hubSettings, setHubSettings] = useState<HubSettingsDocument | null>(null);
   const [githubBindings, setGithubBindings] = useState<GithubThreadBinding[]>([]);
+  const [pluginCatalog, setPluginCatalog] = useState<PluginCatalogEntry[]>([]);
+  const [pluginRecords, setPluginRecords] = useState<PluginRecord[]>([]);
+  const [pluginReceipts, setPluginReceipts] = useState<PluginCallReceipt[]>([]);
   const [activeId, setActiveId] = useState<string | null>(() => readActiveThreadId());
   const [title, setTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -295,6 +325,19 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
     setGithubBindings(list);
   }, []);
 
+  /**
+   * Reload plugin catalog + runtime records + call receipts (M23).
+   */
+  const refreshPlugins = useCallback(async () => {
+    const [catalog, body] = await Promise.all([
+      fetchPluginCatalog(),
+      fetchPlugins(),
+    ]);
+    setPluginCatalog(catalog);
+    setPluginRecords(body.plugins);
+    setPluginReceipts(body.receipts);
+  }, []);
+
   useEffect(() => {
     void refreshReceipts().catch((err: unknown) =>
       setError(err instanceof Error ? err.message : String(err)),
@@ -324,6 +367,12 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
       setError(err instanceof Error ? err.message : String(err)),
     );
   }, [refreshGithubBindings]);
+
+  useEffect(() => {
+    void refreshPlugins().catch((err: unknown) =>
+      setError(err instanceof Error ? err.message : String(err)),
+    );
+  }, [refreshPlugins]);
 
   useEffect(() => {
     void fetchHealth()
@@ -621,6 +670,115 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
   }
 
   /**
+   * Install a catalog plugin into the host.
+   * @param id - Plugin id
+   */
+  async function installHubPlugin(id: string): Promise<void> {
+    setError(null);
+    try {
+      await installPlugin(id);
+      await refreshPlugins();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  /**
+   * Uninstall a deactivated plugin.
+   * @param id - Plugin id
+   */
+  async function uninstallHubPlugin(id: string): Promise<void> {
+    setError(null);
+    try {
+      await uninstallPlugin(id);
+      await refreshPlugins();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  /**
+   * Activate an installed in-process plugin.
+   * @param id - Plugin id
+   */
+  async function activateHubPlugin(id: string): Promise<void> {
+    setError(null);
+    try {
+      await activatePlugin(id);
+      await refreshPlugins();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  /**
+   * Deactivate without uninstalling.
+   * @param id - Plugin id
+   */
+  async function deactivateHubPlugin(id: string): Promise<void> {
+    setError(null);
+    try {
+      await deactivatePlugin(id);
+      await refreshPlugins();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  /**
+   * Grant a sensitive capability to a plugin.
+   * @param id - Plugin id
+   * @param capability - Capability name
+   */
+  async function grantHubPlugin(id: string, capability: string): Promise<void> {
+    setError(null);
+    try {
+      await grantPluginCapability(id, capability);
+      await refreshPlugins();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  /**
+   * Revoke a grant.
+   * @param id - Plugin id
+   * @param capability - Capability name
+   */
+  async function revokeHubPlugin(id: string, capability: string): Promise<void> {
+    setError(null);
+    try {
+      await revokePluginCapability(id, capability);
+      await refreshPlugins();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  /**
+   * Call a plugin capability and refresh receipts (denied calls still settle).
+   * @param id - Plugin id
+   * @param capability - Capability name
+   * @param args - Optional args
+   */
+  async function callHubPlugin(
+    id: string,
+    capability: string,
+    args: Record<string, unknown> = {},
+  ): Promise<void> {
+    setError(null);
+    try {
+      const receipt = await callPlugin(id, capability, args);
+      await refreshPlugins();
+      if (receipt.status === "denied" || receipt.status === "error") {
+        setError(`${receipt.status}: ${receipt.detail}`);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  /**
    * Mock/external wake for an await id.
    * @param awaitId - Await id
    */
@@ -794,6 +952,17 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
     refreshGithubBindings,
     bindThreadGithub,
     simulateThreadGithub,
+    pluginCatalog,
+    pluginRecords,
+    pluginReceipts,
+    refreshPlugins,
+    installHubPlugin,
+    uninstallHubPlugin,
+    activateHubPlugin,
+    deactivateHubPlugin,
+    grantHubPlugin,
+    revokeHubPlugin,
+    callHubPlugin,
     approvalProducers,
     pendingApprovals,
     approvalLedger,

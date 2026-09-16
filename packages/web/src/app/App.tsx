@@ -15,6 +15,7 @@ import { BallCustodyPanel } from "../components/BallCustodyPanel";
 import { ApprovalPanel } from "../components/ApprovalPanel";
 import { SettingsPanel } from "../components/SettingsPanel";
 import { GithubChannelPanel } from "../components/GithubChannelPanel";
+import { PluginsPanel } from "../components/PluginsPanel";
 import { useThreadSocket } from "../hooks/useThreadSocket";
 import { useWorkspaceData } from "../hooks/useWorkspaceData";
 
@@ -24,6 +25,7 @@ type CatalogTab =
   | "evidence"
   | "github"
   | "lanes"
+  | "plugins"
   | "receipts"
   | "settings"
   | "skills"
@@ -81,6 +83,17 @@ export function App() {
     refreshGithubBindings,
     bindThreadGithub,
     simulateThreadGithub,
+    pluginCatalog,
+    pluginRecords,
+    pluginReceipts,
+    refreshPlugins,
+    installHubPlugin,
+    uninstallHubPlugin,
+    activateHubPlugin,
+    deactivateHubPlugin,
+    grantHubPlugin,
+    revokeHubPlugin,
+    callHubPlugin,
     activeId,
     setActiveId,
     title,
@@ -105,6 +118,7 @@ export function App() {
   const [approvalsBusy, setApprovalsBusy] = useState(false);
   const [settingsBusy, setSettingsBusy] = useState(false);
   const [githubBusy, setGithubBusy] = useState(false);
+  const [pluginsBusy, setPluginsBusy] = useState(false);
   const [catalogTab, setCatalogTab] = useState<CatalogTab>("approvals");
   const messagesEnd = useRef<HTMLDivElement | null>(null);
   const activeThread = threads.find((t) => t.id === activeId) ?? null;
@@ -330,6 +344,7 @@ export function App() {
                 ["approvals", "Approvals"],
                 ["ball", "Ball"],
                 ["github", "GitHub"],
+                ["plugins", "Plugins"],
                 ["evidence", "Memory"],
                 ["lanes", "Lanes"],
                 ["receipts", "Receipts"],
@@ -461,6 +476,80 @@ export function App() {
                     await simulateThreadGithub(input);
                   } finally {
                     setGithubBusy(false);
+                  }
+                }}
+              />
+            ) : null}
+
+            {catalogTab === "plugins" ? (
+              <PluginsPanel
+                catalog={pluginCatalog}
+                plugins={pluginRecords}
+                receipts={pluginReceipts}
+                activeThreadId={activeId}
+                busy={pluginsBusy}
+                onRefresh={async () => {
+                  setPluginsBusy(true);
+                  try {
+                    await refreshPlugins();
+                  } finally {
+                    setPluginsBusy(false);
+                  }
+                }}
+                onInstall={async (id) => {
+                  setPluginsBusy(true);
+                  try {
+                    await installHubPlugin(id);
+                  } finally {
+                    setPluginsBusy(false);
+                  }
+                }}
+                onUninstall={async (id) => {
+                  setPluginsBusy(true);
+                  try {
+                    await uninstallHubPlugin(id);
+                  } finally {
+                    setPluginsBusy(false);
+                  }
+                }}
+                onActivate={async (id) => {
+                  setPluginsBusy(true);
+                  try {
+                    await activateHubPlugin(id);
+                  } finally {
+                    setPluginsBusy(false);
+                  }
+                }}
+                onDeactivate={async (id) => {
+                  setPluginsBusy(true);
+                  try {
+                    await deactivateHubPlugin(id);
+                  } finally {
+                    setPluginsBusy(false);
+                  }
+                }}
+                onGrant={async (id, capability) => {
+                  setPluginsBusy(true);
+                  try {
+                    await grantHubPlugin(id, capability);
+                  } finally {
+                    setPluginsBusy(false);
+                  }
+                }}
+                onRevoke={async (id, capability) => {
+                  setPluginsBusy(true);
+                  try {
+                    await revokeHubPlugin(id, capability);
+                  } finally {
+                    setPluginsBusy(false);
+                  }
+                }}
+                onCall={async (id, capability, args) => {
+                  setPluginsBusy(true);
+                  try {
+                    await callHubPlugin(id, capability, args);
+                  } finally {
+                    setPluginsBusy(false);
                   }
                 }}
               />

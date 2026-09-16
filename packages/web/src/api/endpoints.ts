@@ -28,6 +28,9 @@ import type {
   WriteLaneResult,
   GithubResourceRef,
   GithubThreadBinding,
+  PluginCallReceipt,
+  PluginCatalogEntry,
+  PluginRecord,
 } from "@mac/shared";
 import { apiJson, apiJsonAccept202 } from "./http";
 
@@ -587,4 +590,135 @@ export async function simulateGithubSignal(input: {
     headers: { "content-type": "application/json" },
     body: JSON.stringify(input),
   });
+}
+
+/**
+ * GET /api/plugins/catalog — official plugin catalog shell (M23).
+ * @returns Catalog entries
+ */
+export async function fetchPluginCatalog(): Promise<PluginCatalogEntry[]> {
+  const data = await apiJson<{ catalog: PluginCatalogEntry[] }>("/api/plugins/catalog");
+  return data.catalog;
+}
+
+/**
+ * GET /api/plugins — records + recent call receipts.
+ * @returns plugins and receipts
+ */
+export async function fetchPlugins(): Promise<{
+  plugins: PluginRecord[];
+  receipts: PluginCallReceipt[];
+}> {
+  return apiJson<{ plugins: PluginRecord[]; receipts: PluginCallReceipt[] }>(
+    "/api/plugins",
+  );
+}
+
+/**
+ * POST /api/plugins/:id/install
+ * @param id - Plugin id
+ * @returns Updated record
+ */
+export async function installPlugin(id: string): Promise<PluginRecord> {
+  const data = await apiJson<{ plugin: PluginRecord }>(`/api/plugins/${id}/install`, {
+    method: "POST",
+  });
+  return data.plugin;
+}
+
+/**
+ * POST /api/plugins/:id/uninstall
+ * @param id - Plugin id
+ * @returns Updated record
+ */
+export async function uninstallPlugin(id: string): Promise<PluginRecord> {
+  const data = await apiJson<{ plugin: PluginRecord }>(
+    `/api/plugins/${id}/uninstall`,
+    { method: "POST" },
+  );
+  return data.plugin;
+}
+
+/**
+ * POST /api/plugins/:id/activate
+ * @param id - Plugin id
+ * @returns Updated record
+ */
+export async function activatePlugin(id: string): Promise<PluginRecord> {
+  const data = await apiJson<{ plugin: PluginRecord }>(
+    `/api/plugins/${id}/activate`,
+    { method: "POST" },
+  );
+  return data.plugin;
+}
+
+/**
+ * POST /api/plugins/:id/deactivate
+ * @param id - Plugin id
+ * @returns Updated record
+ */
+export async function deactivatePlugin(id: string): Promise<PluginRecord> {
+  const data = await apiJson<{ plugin: PluginRecord }>(
+    `/api/plugins/${id}/deactivate`,
+    { method: "POST" },
+  );
+  return data.plugin;
+}
+
+/**
+ * POST /api/plugins/:id/grants
+ * @param id - Plugin id
+ * @param capability - Capability to grant
+ * @returns Updated record
+ */
+export async function grantPluginCapability(
+  id: string,
+  capability: string,
+): Promise<PluginRecord> {
+  const data = await apiJson<{ plugin: PluginRecord }>(`/api/plugins/${id}/grants`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ capability }),
+  });
+  return data.plugin;
+}
+
+/**
+ * DELETE /api/plugins/:id/grants/:capability
+ * @param id - Plugin id
+ * @param capability - Capability to revoke
+ * @returns Updated record
+ */
+export async function revokePluginCapability(
+  id: string,
+  capability: string,
+): Promise<PluginRecord> {
+  const data = await apiJson<{ plugin: PluginRecord }>(
+    `/api/plugins/${id}/grants/${encodeURIComponent(capability)}`,
+    { method: "DELETE" },
+  );
+  return data.plugin;
+}
+
+/**
+ * POST /api/plugins/:id/call — settle a capability invocation.
+ * @param id - Plugin id
+ * @param capability - Capability name
+ * @param args - Capability args
+ * @returns Call receipt (may be denied)
+ */
+export async function callPlugin(
+  id: string,
+  capability: string,
+  args: Record<string, unknown> = {},
+): Promise<PluginCallReceipt> {
+  const data = await apiJson<{ receipt: PluginCallReceipt }>(
+    `/api/plugins/${id}/call`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ capability, args }),
+    },
+  );
+  return data.receipt;
 }

@@ -1,0 +1,12 @@
+{
+  "plugins": [
+    {
+      "id": "hello-mac",
+      "name": "Hello Mac",
+      "version": "0.1.0",
+      "description": "Official example plugin — hub.notify + optional thread.post_message with grant.",
+      "path": "examples/hello-mac",
+      "official": true
+    }
+  ]
+}
