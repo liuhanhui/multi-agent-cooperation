@@ -1,0 +1,8 @@
+{
+  "id": "hello-mac",
+  "name": "Hello Mac",
+  "version": "0.1.0",
+  "description": "Example plugin that greets the Hub and can post to a thread only with a grant.",
+  "runtime": "in-process",
+  "requestedCapabilities": ["hub.notify", "thread.post_message"]
+}

@@ -29,7 +29,7 @@ Why: one sentence
 | `approval-index` | active | Human approval aggregation (producer catalog + ledger) | M20 |
 | `github-signals` | active | GitHub PR/issue wait → wake + thread note | M22 |
 | `signal-ingress` | active | Webhook HMAC verify + ConnectorRouter normalize | M22 |
-| `plugin` | planned | Extensibility host | M23 |
+| `plugin` | active | Manifest / activate / grant whitelist / catalog shell | M23 |
 
 Ordinary increments: `Map delta: none`. New boundaries require updating this table before merge.
 

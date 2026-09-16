@@ -18,6 +18,7 @@ Structure cleanup (`chore/structure-align-cells`): keep Fastify + React; align f
 | `approval/` + `http/routes-approvals.ts` | approval-index | Approval Hub ingress + decide ledger |
 | `settings/` + `http/routes-settings.ts` | hub-action-surface + routing-context | Hub Settings document + routing policy PATCH |
 | `github/` + `http/routes-github.ts` | github-signals + signal-ingress | Bindings, webhook HMAC, simulate wake |
+| `plugin/` + `http/routes-plugins.ts` | plugin | Catalog, install/activate, grants, call receipts |
 | `callback-auth/` | callback-auth | InvocationCredentialStore + bearer verify |
 | `http/routes-callbacks.ts` | callback-auth | Agent callback ingress + auth-failures |
 | `routing/` | routing-context | mention → catIds policy |
@@ -55,6 +56,7 @@ Structure cleanup (`chore/structure-align-cells`): keep Fastify + React; align f
 | `components/ApprovalPanel.tsx` | approval-index | Human approve/reject + producer demos |
 | `components/SettingsPanel.tsx` | hub-action-surface + routing-context | Settings nav + accounts + Rules routing |
 | `components/GithubChannelPanel.tsx` | github-signals | Bind PR/issue + simulate wake |
+| `components/PluginsPanel.tsx` | plugin | Catalog install/activate/grants/call |
 | `components/` | presentation | Sidebar / ChatPanel / Bubble / Skills / Tools |
 
 ## Shared (`packages/shared/src`)
@@ -70,6 +72,7 @@ Structure cleanup (`chore/structure-align-cells`): keep Fastify + React; align f
 | `types/approval.ts` | ApprovalIngress / Request / producer catalog |
 | `types/hub-settings.ts` | HubSettingsDocument / RoutingPolicy / provider accounts |
 | `types/github-signal.ts` | GithubResourceRef / binding / webhook ingress helpers |
+| `types/plugin.ts` | PluginManifest / grants / call receipts / host capabilities |
 | `mention.ts` | `parseMentions` (routing authority shared with API) |
 | `index.ts` | Barrel re-exports only |
 

@@ -143,4 +143,20 @@ export {
   type GithubThreadBinding,
   type GithubWebhookIngress,
 } from "./types/github-signal.js";
+export {
+  HARD_DENIED_CAPABILITIES,
+  HOST_CAPABILITIES,
+  SENSITIVE_CAPABILITIES,
+  isHardDeniedCapability,
+  isHostCapability,
+  isSensitiveCapability,
+  type HostCapability,
+  type PluginCallReceipt,
+  type PluginCallStatus,
+  type PluginCatalogEntry,
+  type PluginLifecycleStatus,
+  type PluginManifest,
+  type PluginRecord,
+  type PluginRuntimeKind,
+} from "./types/plugin.js";
 

@@ -25,11 +25,13 @@ import { registerCustodyRoutes } from "./http/routes-custody.js";
 import { registerApprovalRoutes } from "./http/routes-approvals.js";
 import { registerSettingsRoutes } from "./http/routes-settings.js";
 import { registerGithubRoutes } from "./http/routes-github.js";
+import { registerPluginRoutes } from "./http/routes-plugins.js";
 import { registerWsRoutes } from "./http/routes-ws.js";
 import { ApprovalStore } from "./approval/approval-store.js";
 import { BallCustodyStore } from "./custody/ball-custody-store.js";
 import { GithubBindingStore } from "./github/binding-store.js";
 import { GithubSignalRouter } from "./github/signal-router.js";
+import { PluginHost } from "./plugin/plugin-host.js";
 import { HubSettingsStore } from "./settings/hub-settings-store.js";
 import { FeatureStore } from "./features/feature-store.js";
 import { EvidenceStore } from "./memory/evidence-store.js";
@@ -98,6 +100,12 @@ export interface AppOptions {
   githubSignals?: GithubSignalRouter;
   /** Disable GitHub signal ingress (rare; tests). */
   disableGithub?: boolean;
+  /** Optional PluginHost (tests). */
+  plugins?: PluginHost;
+  /** Plugins directory override. */
+  pluginsDir?: string;
+  /** Disable plugin host (rare; tests). */
+  disablePlugins?: boolean;
 }
 
 /**
@@ -210,6 +218,16 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
           hub,
         }));
 
+  const pluginHost =
+    opts.plugins ??
+    (opts.disablePlugins
+      ? undefined
+      : new PluginHost({
+          pluginsRoot: opts.pluginsDir,
+          store: opts.store,
+          hub,
+        }));
+
   const deps: AppDeps = {
     store: opts.store,
     hub,
@@ -232,6 +250,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     settings: settingsStore,
     githubBindings,
     githubSignals,
+    plugins: pluginHost,
   };
 
   // Restart safety: pending/streaming bubbles → failed(orphan-recovered).
@@ -257,6 +276,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   registerApprovalRoutes(app, deps);
   registerSettingsRoutes(app, deps);
   registerGithubRoutes(app, deps);
+  registerPluginRoutes(app, deps);
   registerWsRoutes(app, deps);
 
   return app;
