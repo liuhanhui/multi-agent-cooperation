@@ -16,6 +16,7 @@ import { ApprovalPanel } from "../components/ApprovalPanel";
 import { SettingsPanel } from "../components/SettingsPanel";
 import { GithubChannelPanel } from "../components/GithubChannelPanel";
 import { PluginsPanel } from "../components/PluginsPanel";
+import { BootcampPanel } from "../components/BootcampPanel";
 import { useThreadSocket } from "../hooks/useThreadSocket";
 import { useWorkspaceData } from "../hooks/useWorkspaceData";
 
@@ -259,6 +260,11 @@ export function App() {
           <span className="pill">
             ws <strong>{wsState}</strong>
           </span>
+          <BootcampPanel
+            healthOk={health?.status === "ok"}
+            threadCount={threads.length}
+            messageCount={messages.length}
+          />
         </div>
         {error ? <p className="err">{error}</p> : null}
       </header>

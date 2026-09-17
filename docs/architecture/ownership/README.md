@@ -30,6 +30,8 @@ Why: one sentence
 | `github-signals` | active | GitHub PR/issue wait → wake + thread note | M22 |
 | `signal-ingress` | active | Webhook HMAC verify + ConnectorRouter normalize | M22 |
 | `plugin` | active | Manifest / activate / grant whitelist / catalog shell | M23 |
+| `distribution` | active | Source setup/doctor/start scripts + version pins | M24 |
+| `concierge-surface` | active (thin) | Browser-local operator Bootcamp walkthrough | M24 |
 
 Ordinary increments: `Map delta: none`. New boundaries require updating this table before merge.
 
