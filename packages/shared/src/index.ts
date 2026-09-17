@@ -175,4 +175,14 @@ export {
   type OwnerResponseDisposition,
   type RespondFrictionInput,
 } from "./types/friction.js";
+export {
+  type CatPresentSetting,
+  type PresentDelivery,
+  type PresentDeliveryStatus,
+  type PresentPolicy,
+  type PresentSkipReason,
+  type PresentSnapshot,
+  type PresentTickResult,
+  type UpdatePresentPolicyInput,
+} from "./types/present.js";
 

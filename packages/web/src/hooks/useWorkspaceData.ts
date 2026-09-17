@@ -32,6 +32,9 @@ import type {
   EvaluateFrictionInput,
   FrictionRecord,
   RespondFrictionInput,
+  PresentSnapshot,
+  PresentTickResult,
+  UpdatePresentPolicyInput,
 } from "@mac/shared";
 import {
   activatePlugin,
@@ -61,6 +64,7 @@ import {
   fetchLaneDispositions,
   fetchPluginCatalog,
   fetchPlugins,
+  fetchPresents,
   fetchSettings,
   fetchSkill,
   fetchSkills,
@@ -71,12 +75,14 @@ import {
   holdBall,
   installPlugin,
   patchRoutingPolicy,
+  patchPresentPolicy,
   patchThreadMembers,
   respondFriction,
   revokePluginCapability,
   searchEvidence,
   simulateGithubSignal,
   submitApproval,
+  tickPresents,
   uninstallPlugin,
   wakeAwait,
   writeLane,
@@ -188,6 +194,13 @@ export interface UseWorkspaceDataResult {
     id: string,
     input: RespondFrictionInput,
   ) => Promise<void>;
+  presentSnapshot: PresentSnapshot | null;
+  presentTickResult: PresentTickResult | null;
+  refreshPresents: () => Promise<void>;
+  patchHubPresentPolicy: (
+    patch: UpdatePresentPolicyInput,
+  ) => Promise<void>;
+  tickHubPresents: (threadId?: string) => Promise<void>;
   approvalProducers: ApprovalProducerCatalogEntry[];
   pendingApprovals: ApprovalRequest[];
   approvalLedger: ApprovalRequest[];
@@ -249,6 +262,10 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
   const [pluginRecords, setPluginRecords] = useState<PluginRecord[]>([]);
   const [pluginReceipts, setPluginReceipts] = useState<PluginCallReceipt[]>([]);
   const [frictions, setFrictions] = useState<FrictionRecord[]>([]);
+  const [presentSnapshot, setPresentSnapshot] =
+    useState<PresentSnapshot | null>(null);
+  const [presentTickResult, setPresentTickResult] =
+    useState<PresentTickResult | null>(null);
   const [activeId, setActiveId] = useState<string | null>(() => readActiveThreadId());
   const [title, setTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -366,6 +383,14 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
     setFrictions(await fetchFrictions());
   }, []);
 
+  /**
+   * Reload M27 Present policy, usage, and activity.
+   * @returns Promise after replacing the local snapshot
+   */
+  const refreshPresents = useCallback(async () => {
+    setPresentSnapshot(await fetchPresents());
+  }, []);
+
   useEffect(() => {
     void refreshReceipts().catch((err: unknown) =>
       setError(err instanceof Error ? err.message : String(err)),
@@ -407,6 +432,12 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
       setError(err instanceof Error ? err.message : String(err)),
     );
   }, [refreshFrictions]);
+
+  useEffect(() => {
+    void refreshPresents().catch((err: unknown) =>
+      setError(err instanceof Error ? err.message : String(err)),
+    );
+  }, [refreshPresents]);
 
   useEffect(() => {
     void fetchHealth()
@@ -871,6 +902,41 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
   }
 
   /**
+   * Update proactive policy and refresh its control-plane snapshot.
+   * @param patch - Budget, timing, global, or per-cat changes
+   * @returns Promise after mutation
+   */
+  async function patchHubPresentPolicy(
+    patch: UpdatePresentPolicyInput,
+  ): Promise<void> {
+    setError(null);
+    try {
+      const snapshot = await patchPresentPolicy(patch);
+      setPresentSnapshot(snapshot);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      throw err;
+    }
+  }
+
+  /**
+   * Run one bounded eligibility check and expose its result.
+   * @param threadId - Optional active thread constraint
+   * @returns Promise after tick and snapshot refresh
+   */
+  async function tickHubPresents(threadId?: string): Promise<void> {
+    setError(null);
+    try {
+      const body = await tickPresents(threadId);
+      setPresentTickResult(body.result);
+      setPresentSnapshot(body.snapshot);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      throw err;
+    }
+  }
+
+  /**
    * Mock/external wake for an await id.
    * @param awaitId - Await id
    */
@@ -1060,6 +1126,11 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
     captureHubFriction,
     evaluateHubFriction,
     respondHubFriction,
+    presentSnapshot,
+    presentTickResult,
+    refreshPresents,
+    patchHubPresentPolicy,
+    tickHubPresents,
     approvalProducers,
     pendingApprovals,
     approvalLedger,

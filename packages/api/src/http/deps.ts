@@ -14,6 +14,7 @@ import type { GithubBindingStore } from "../github/binding-store.js";
 import type { GithubSignalRouter } from "../github/signal-router.js";
 import type { PluginHost } from "../plugin/plugin-host.js";
 import type { FrictionStore } from "../harness/friction-store.js";
+import type { PresentService } from "../present/present-service.js";
 import type { ToolRegistry } from "../mcp/tool-registry.js";
 import type { SkillRegistry } from "../skills/skill-registry.js";
 import type { MacStore } from "../store/types.js";
@@ -64,4 +65,6 @@ export interface AppDeps {
   plugins?: PluginHost;
   /** M25 friction capture → verdict → owner response lifecycle. */
   frictions?: FrictionStore;
+  /** M27 bounded proactive relationship loop. */
+  presents?: PresentService;
 }

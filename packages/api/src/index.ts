@@ -10,6 +10,7 @@ import { loadCatRegistry, type CatRegistry } from "./cats/load-cat-config.js";
 import { buildApp } from "./create-app.js";
 import { resolveEvidenceDbPath } from "./memory/evidence-store.js";
 import { resolveFrictionDbPath } from "./harness/friction-store.js";
+import { resolvePresentDbPath } from "./present/present-store.js";
 import { createStore } from "./store/create-store.js";
 
 /**
@@ -98,6 +99,8 @@ const app = await buildApp({
   evidenceDbPath: resolveEvidenceDbPath(),
   // Durable lifecycle ledger; API exposes no delete/truncate path.
   frictionDbPath: resolveFrictionDbPath(),
+  // Opt-in proactive policy + immutable attempt ledger survive restarts.
+  presentDbPath: resolvePresentDbPath(),
 });
 
 await app.listen({ port, host: "127.0.0.1" });

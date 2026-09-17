@@ -27,6 +27,7 @@ import { registerSettingsRoutes } from "./http/routes-settings.js";
 import { registerGithubRoutes } from "./http/routes-github.js";
 import { registerPluginRoutes } from "./http/routes-plugins.js";
 import { registerFrictionRoutes } from "./http/routes-frictions.js";
+import { registerPresentRoutes } from "./http/routes-presents.js";
 import { registerWsRoutes } from "./http/routes-ws.js";
 import { ApprovalStore } from "./approval/approval-store.js";
 import { BallCustodyStore } from "./custody/ball-custody-store.js";
@@ -34,6 +35,8 @@ import { GithubBindingStore } from "./github/binding-store.js";
 import { GithubSignalRouter } from "./github/signal-router.js";
 import { PluginHost } from "./plugin/plugin-host.js";
 import { FrictionStore } from "./harness/friction-store.js";
+import { PresentService } from "./present/present-service.js";
+import { PresentStore } from "./present/present-store.js";
 import { HubSettingsStore } from "./settings/hub-settings-store.js";
 import { FeatureStore } from "./features/feature-store.js";
 import { EvidenceStore } from "./memory/evidence-store.js";
@@ -114,6 +117,16 @@ export interface AppOptions {
   frictionDbPath?: string;
   /** Disable friction harness (rare; tests). */
   disableFrictions?: boolean;
+  /** Optional PresentService (tests). */
+  presents?: PresentService;
+  /** Optional PresentStore (tests). */
+  presentStore?: PresentStore;
+  /** Present SQLite path override. */
+  presentDbPath?: string;
+  /** Disable proactive Present loop (rare; tests). */
+  disablePresents?: boolean;
+  /** Disable only the periodic scheduler while retaining routes. */
+  disablePresentScheduler?: boolean;
 }
 
 /**
@@ -242,6 +255,35 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
       ? undefined
       : new FrictionStore({ dbPath: opts.frictionDbPath ?? ":memory:" }));
 
+  const ownsPresentStore =
+    !opts.presents && !opts.presentStore && !opts.disablePresents;
+  const presentStore =
+    opts.presentStore ??
+    (opts.presents || opts.disablePresents
+      ? undefined
+      : new PresentStore({
+          dbPath: opts.presentDbPath ?? ":memory:",
+          catIds: opts.cats?.list().map((cat) => cat.id) ?? [],
+        }));
+  const presentService =
+    opts.presents ??
+    (presentStore
+      ? new PresentService({
+          store: opts.store,
+          hub,
+          presents: presentStore,
+          cats: opts.cats,
+          executions,
+        })
+      : undefined);
+  if (presentService && !opts.disablePresentScheduler) {
+    presentService.start();
+  }
+  app.addHook("onClose", async () => {
+    presentService?.stop();
+    if (ownsPresentStore) presentStore?.close();
+  });
+
   const deps: AppDeps = {
     store: opts.store,
     hub,
@@ -266,6 +308,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     githubSignals,
     plugins: pluginHost,
     frictions: frictionStore,
+    presents: presentService,
   };
 
   // Restart safety: pending/streaming bubbles → failed(orphan-recovered).
@@ -293,6 +336,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   registerGithubRoutes(app, deps);
   registerPluginRoutes(app, deps);
   registerFrictionRoutes(app, deps);
+  registerPresentRoutes(app, deps);
   registerWsRoutes(app, deps);
 
   return app;

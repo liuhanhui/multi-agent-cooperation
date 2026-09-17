@@ -18,6 +18,7 @@ import { GithubChannelPanel } from "../components/GithubChannelPanel";
 import { PluginsPanel } from "../components/PluginsPanel";
 import { ConciergePanel } from "../components/ConciergePanel";
 import { FrictionPanel } from "../components/FrictionPanel";
+import { PresentPanel } from "../components/PresentPanel";
 import { useThreadSocket } from "../hooks/useThreadSocket";
 import { useWorkspaceData } from "../hooks/useWorkspaceData";
 import {
@@ -33,6 +34,7 @@ type CatalogTab =
   | "github"
   | "lanes"
   | "plugins"
+  | "present"
   | "receipts"
   | "settings"
   | "skills"
@@ -106,6 +108,11 @@ export function App() {
     captureHubFriction,
     evaluateHubFriction,
     respondHubFriction,
+    presentSnapshot,
+    presentTickResult,
+    refreshPresents,
+    patchHubPresentPolicy,
+    tickHubPresents,
     activeId,
     setActiveId,
     title,
@@ -132,6 +139,7 @@ export function App() {
   const [githubBusy, setGithubBusy] = useState(false);
   const [pluginsBusy, setPluginsBusy] = useState(false);
   const [frictionsBusy, setFrictionsBusy] = useState(false);
+  const [presentBusy, setPresentBusy] = useState(false);
   const [catalogTab, setCatalogTab] = useState<CatalogTab>("approvals");
   const messagesEnd = useRef<HTMLDivElement | null>(null);
   const guideEchoScope = useRef<GuidedEchoScope | null>(null);
@@ -392,6 +400,7 @@ export function App() {
                 ["github", "GitHub"],
                 ["plugins", "Plugins"],
                 ["frictions", "Friction"],
+                ["present", "Present"],
                 ["evidence", "Memory"],
                 ["lanes", "Lanes"],
                 ["receipts", "Receipts"],
@@ -640,6 +649,40 @@ export function App() {
                     await respondHubFriction(id, input);
                   } finally {
                     setFrictionsBusy(false);
+                  }
+                }}
+              />
+            ) : null}
+
+            {catalogTab === "present" ? (
+              <PresentPanel
+                cats={cats}
+                snapshot={presentSnapshot}
+                tickResult={presentTickResult}
+                activeThreadId={activeId}
+                busy={presentBusy}
+                onRefresh={async () => {
+                  setPresentBusy(true);
+                  try {
+                    await refreshPresents();
+                  } finally {
+                    setPresentBusy(false);
+                  }
+                }}
+                onPatch={async (patch) => {
+                  setPresentBusy(true);
+                  try {
+                    await patchHubPresentPolicy(patch);
+                  } finally {
+                    setPresentBusy(false);
+                  }
+                }}
+                onTick={async (threadId) => {
+                  setPresentBusy(true);
+                  try {
+                    await tickHubPresents(threadId);
+                  } finally {
+                    setPresentBusy(false);
                   }
                 }}
               />
