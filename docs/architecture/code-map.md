@@ -50,6 +50,7 @@ Structure cleanup (`chore/structure-align-cells`): keep Fastify + React; align f
 | `hooks/useThreadSocket.ts` | transport + bubble-pipeline | WS → reducer |
 | `chat/` | bubble-pipeline | reducer, avatar, mention re-export |
 | `features/session/` | thread-navigation | active thread sessionStorage |
+| `features/guide/` + repo `guides/` | concierge-surface | YAML catalog, progress state, target-driven engine |
 | `components/MissionBoard.tsx` | portable-governance | Mission columns + create/advance/bind |
 | `components/EvidencePanel.tsx` | memory | Evidence write / BM25 search |
 | `components/WriteLanesPanel.tsx` | memory | Lane write + conflict disposition |
@@ -59,7 +60,7 @@ Structure cleanup (`chore/structure-align-cells`): keep Fastify + React; align f
 | `components/SettingsPanel.tsx` | hub-action-surface + routing-context | Settings nav + accounts + Rules routing |
 | `components/GithubChannelPanel.tsx` | github-signals | Bind PR/issue + simulate wake |
 | `components/PluginsPanel.tsx` | plugin | Catalog install/activate/grants/call |
-| `components/BootcampPanel.tsx` | concierge-surface | 3–5 minute operator onboarding |
+| `components/ConciergePanel.tsx` | concierge-surface | Persistent launcher + resumable guide HUD |
 | `components/FrictionPanel.tsx` | harness-eval | Capture, verdict, owner response, audit trail |
 | `components/ui/FormField.tsx` | presentation | Shared labelled inputs, textareas, and selects |
 | `components/` | presentation | Sidebar / ChatPanel / Bubble / Skills / Tools |

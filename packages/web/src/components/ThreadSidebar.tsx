@@ -35,14 +35,20 @@ export function ThreadSidebar({
         <span className="paw mint" />
         <span className="paw soft" />
       </div>
+      {/* Stable M26 targets: guide YAML depends on these semantic ids. */}
       <div className="row">
         <input
           value={title}
+          data-guide-id="thread.create.title"
           onChange={(e) => onTitleChange(e.target.value)}
           placeholder="Name a new room…"
           aria-label="New thread title"
         />
-        <button type="button" onClick={onCreate}>
+        <button
+          type="button"
+          data-guide-id="thread.create.submit"
+          onClick={onCreate}
+        >
           Open
         </button>
       </div>

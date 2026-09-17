@@ -119,6 +119,7 @@ export function ChatPanel({
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Stable M26 targets let the guide follow real composer actions. */}
       <form
         className="composer"
         onSubmit={(e) => {
@@ -128,6 +129,7 @@ export function ChatPanel({
       >
         <input
           value={draft}
+          data-guide-id="chat.composer.input"
           onChange={(e) => onDraftChange(e.target.value)}
           placeholder={`Whisper to the lounge…  or  @${defaultCat?.id ?? "architect"} …`}
           aria-label="Message"
@@ -136,7 +138,12 @@ export function ChatPanel({
           <span className="paw" aria-hidden="true" />
           Send
         </button>
-        <button type="button" className="ghost" onClick={onEcho}>
+        <button
+          type="button"
+          className="ghost"
+          data-guide-id="chat.composer.echo"
+          onClick={onEcho}
+        >
           Echo
         </button>
       </form>

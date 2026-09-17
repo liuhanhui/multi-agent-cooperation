@@ -6,7 +6,7 @@ Platform layer **above** Agent CLIs so multiple model families work as one team.
 
 ## Status
 
-**Wave 6 / M25** — durable friction capture, verdict, and accountable owner-response loop.
+**Wave 6 / M26** — persistent Concierge and a resumable, action-driven first-room guide.
 
 Roadmap: [`build-plan.md`](./build-plan.md) · Vision: [`docs/VISION.md`](./docs/VISION.md) · Decisions: [`docs/DECISIONS.md`](./docs/DECISIONS.md)
 

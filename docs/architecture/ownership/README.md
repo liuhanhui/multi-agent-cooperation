@@ -31,7 +31,7 @@ Why: one sentence
 | `signal-ingress` | active | Webhook HMAC verify + ConnectorRouter normalize | M22 |
 | `plugin` | active | Manifest / activate / grant whitelist / catalog shell | M23 |
 | `distribution` | active | Source setup/doctor/start scripts + version pins | M24 |
-| `concierge-surface` | active (thin) | Browser-local operator Bootcamp walkthrough | M24 |
+| `concierge-surface` | active | Persistent Concierge + action-driven YAML guide | M24 / M26 |
 | `harness-eval` | active | Friction capture, verdict, owner-response ledger | M25 |
 
 Ordinary increments: `Map delta: none`. New boundaries require updating this table before merge.

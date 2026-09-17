@@ -1,0 +1,19 @@
+tags:
+  workspace.health:
+    page: /
+    component: App.tsx
+  thread.create.title:
+    page: /
+    component: ThreadSidebar.tsx
+  thread.create.submit:
+    page: /
+    component: ThreadSidebar.tsx
+  chat.composer.input:
+    page: /
+    component: ChatPanel.tsx
+  chat.composer.echo:
+    page: /
+    component: ChatPanel.tsx
+  hub.tab.frictions:
+    page: /
+    component: App.tsx

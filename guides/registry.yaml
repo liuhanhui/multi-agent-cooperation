@@ -1,0 +1,12 @@
+- id: first-room
+  name: First room tour
+  keywords:
+    - onboarding
+    - first room
+    - getting started
+    - 新手引导
+    - 创建房间
+  entry_page: /
+  estimated_time: 3min
+  flow_file: guides/flows/first-room.yaml
+  priority: P1

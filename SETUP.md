@@ -39,7 +39,8 @@ Open:
 - API health: http://127.0.0.1:4010/health
 
 Use **Echo** in a thread for the first smoke test. It requires no provider CLI.
-The in-product **Bootcamp** button walks through the first five checks.
+The persistent **Concierge** starts a guided first-room flow and can resume it
+after a refresh.
 
 Verify from another terminal:
 

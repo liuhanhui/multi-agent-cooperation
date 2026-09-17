@@ -16,10 +16,14 @@ import { ApprovalPanel } from "../components/ApprovalPanel";
 import { SettingsPanel } from "../components/SettingsPanel";
 import { GithubChannelPanel } from "../components/GithubChannelPanel";
 import { PluginsPanel } from "../components/PluginsPanel";
-import { BootcampPanel } from "../components/BootcampPanel";
+import { ConciergePanel } from "../components/ConciergePanel";
 import { FrictionPanel } from "../components/FrictionPanel";
 import { useThreadSocket } from "../hooks/useThreadSocket";
 import { useWorkspaceData } from "../hooks/useWorkspaceData";
+import {
+  findGuidedEchoSettlement,
+  type GuidedEchoScope,
+} from "../features/guide/guide-confirm";
 
 type CatalogTab =
   | "approvals"
@@ -130,11 +134,30 @@ export function App() {
   const [frictionsBusy, setFrictionsBusy] = useState(false);
   const [catalogTab, setCatalogTab] = useState<CatalogTab>("approvals");
   const messagesEnd = useRef<HTMLDivElement | null>(null);
+  const guideEchoScope = useRef<GuidedEchoScope | null>(null);
   const activeThread = threads.find((t) => t.id === activeId) ?? null;
 
   useEffect(() => {
     messagesEnd.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    const scope = guideEchoScope.current;
+    const settlement = findGuidedEchoSettlement(
+      messages,
+      activeId,
+      scope,
+    );
+    if (!settlement) return;
+    guideEchoScope.current = null;
+    if (settlement !== "completed") return;
+    // Confirm only after the guided thread produces a new completed assistant bubble.
+    window.dispatchEvent(
+      new CustomEvent("guide:confirm", {
+        detail: { target: "chat.composer.echo" },
+      }),
+    );
+  }, [activeId, messages]);
 
   /**
    * Insert `@defaultCat ` at the start of the composer when it does not already
@@ -238,7 +261,11 @@ export function App() {
         </div>
 
         <div className="status-bar" aria-label="Workspace status">
-          <span className={`pill${health?.status === "ok" ? " ok" : ""}`}>
+          {/* Guide YAML treats this semantic id as the first visible target. */}
+          <span
+            className={`pill${health?.status === "ok" ? " ok" : ""}`}
+            data-guide-id="workspace.health"
+          >
             health <strong>{health?.status ?? "…"}</strong>
             {health?.agent ? ` · ${health.agent}` : ""}
           </span>
@@ -268,11 +295,7 @@ export function App() {
           <span className="pill">
             ws <strong>{wsState}</strong>
           </span>
-          <BootcampPanel
-            healthOk={health?.status === "ok"}
-            threadCount={threads.length}
-            messageCount={messages.length}
-          />
+          <ConciergePanel />
         </div>
         {error ? <p className="err">{error}</p> : null}
       </header>
@@ -345,7 +368,15 @@ export function App() {
             onDefaultCatChange={(id) => void setDefaultCat(id)}
             onInsertMention={insertMention}
             onSend={() => void sendMessage("invoke")}
-            onEcho={() => void sendMessage("echo")}
+            onEcho={() => {
+              if (activeId) {
+                guideEchoScope.current = {
+                  threadId: activeId,
+                  baselineSeq: messages.at(-1)?.seq ?? 0,
+                };
+              }
+              void sendMessage("echo");
+            }}
             onBlockAction={(id, action) => void handleBlockAction(id, action)}
             actionBusy={actionBusy}
           />
@@ -353,6 +384,7 @@ export function App() {
 
         <aside className="catalog-rail" aria-label="Desk shelf">
           <div className="catalog-tabs" role="tablist" aria-label="Shelf tabs">
+            {/* M26 guide targets use semantic ids; only contracted tabs receive one. */}
             {(
               [
                 ["approvals", "Approvals"],
@@ -374,6 +406,9 @@ export function App() {
                 role="tab"
                 aria-selected={catalogTab === id}
                 className={`catalog-tab${catalogTab === id ? " active" : ""}`}
+                data-guide-id={
+                  id === "frictions" ? "hub.tab.frictions" : undefined
+                }
                 onClick={() => setCatalogTab(id)}
               >
                 {label}
