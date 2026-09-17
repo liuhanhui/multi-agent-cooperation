@@ -35,6 +35,9 @@ import type {
   EvaluateFrictionInput,
   FrictionRecord,
   RespondFrictionInput,
+  PresentSnapshot,
+  PresentTickResult,
+  UpdatePresentPolicyInput,
 } from "@mac/shared";
 import { apiJson, apiJsonAccept202 } from "./http";
 
@@ -792,4 +795,45 @@ export async function respondFriction(
     },
   );
   return data.friction;
+}
+
+/**
+ * GET /api/presents — M27 policy, budget usage, and recent activity.
+ * @returns Present control-plane snapshot
+ */
+export function fetchPresents(): Promise<PresentSnapshot> {
+  return apiJson<PresentSnapshot>("/api/presents");
+}
+
+/**
+ * PATCH /api/presents/policy — update opt-in and bounded delivery controls.
+ * @param patch - Global policy and per-cat switches
+ * @returns Updated snapshot
+ */
+export function patchPresentPolicy(
+  patch: UpdatePresentPolicyInput,
+): Promise<PresentSnapshot> {
+  return apiJson<PresentSnapshot>("/api/presents/policy", {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+}
+
+/**
+ * POST /api/presents/tick — manually evaluate one thread without bypassing safety.
+ * @param threadId - Optional active thread for demo
+ * @returns Tick result plus refreshed snapshot
+ */
+export function tickPresents(
+  threadId?: string,
+): Promise<{ result: PresentTickResult; snapshot: PresentSnapshot }> {
+  return apiJson<{ result: PresentTickResult; snapshot: PresentSnapshot }>(
+    "/api/presents/tick",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ threadId }),
+    },
+  );
 }

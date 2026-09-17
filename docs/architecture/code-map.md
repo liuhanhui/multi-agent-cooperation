@@ -21,6 +21,7 @@ Structure cleanup (`chore/structure-align-cells`): keep Fastify + React; align f
 | `github/` + `http/routes-github.ts` | github-signals + signal-ingress | Bindings, webhook HMAC, simulate wake |
 | `plugin/` + `http/routes-plugins.ts` | plugin | Catalog, install/activate, grants, call receipts |
 | `harness/` + `http/routes-frictions.ts` | harness-eval | Durable friction lifecycle + HTTP boundary |
+| `present/` + `http/routes-presents.ts` | proactive-relationship-loop + cat-life-settings | Policy, budget reservation, scheduler, delivery ledger |
 | `callback-auth/` | callback-auth | InvocationCredentialStore + bearer verify |
 | `http/routes-callbacks.ts` | callback-auth | Agent callback ingress + auth-failures |
 | `routing/` | routing-context | mention → catIds policy |
@@ -62,6 +63,7 @@ Structure cleanup (`chore/structure-align-cells`): keep Fastify + React; align f
 | `components/PluginsPanel.tsx` | plugin | Catalog install/activate/grants/call |
 | `components/ConciergePanel.tsx` | concierge-surface | Persistent launcher + resumable guide HUD |
 | `components/FrictionPanel.tsx` | harness-eval | Capture, verdict, owner response, audit trail |
+| `components/PresentPanel.tsx` | proactive-relationship-loop + cat-life-settings | Master/per-cat controls, limits, usage, activity |
 | `components/ui/FormField.tsx` | presentation | Shared labelled inputs, textareas, and selects |
 | `components/` | presentation | Sidebar / ChatPanel / Bubble / Skills / Tools |
 
@@ -80,6 +82,7 @@ Structure cleanup (`chore/structure-align-cells`): keep Fastify + React; align f
 | `types/github-signal.ts` | GithubResourceRef / binding / webhook ingress helpers |
 | `types/plugin.ts` | PluginManifest / grants / call receipts / host capabilities |
 | `types/friction.ts` | Friction lifecycle, verdict, owner response, invariant |
+| `types/present.ts` | Proactive policy, budgeted delivery, tick result |
 | `mention.ts` | `parseMentions` (routing authority shared with API) |
 | `index.ts` | Barrel re-exports only |
 

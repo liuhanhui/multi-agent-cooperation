@@ -65,6 +65,15 @@ Plugin:
    - runtime config is read-only to agents;
    - only project ports 4010/4011/6410 are used by default.
 
+Present relationship loop:
+
+1. Open **Present** and confirm proactive presence defaults off.
+2. Enable it, set daily budget to `1`, and leave one cat allowed.
+3. Set idle to `1`, send a user message, wait one minute, then click
+   **Run eligible check** and observe the default cat message.
+4. Click again and confirm that user message cannot trigger twice.
+5. Turn the master switch off.
+
 Finally:
 
 ```powershell

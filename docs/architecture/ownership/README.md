@@ -33,6 +33,8 @@ Why: one sentence
 | `distribution` | active | Source setup/doctor/start scripts + version pins | M24 |
 | `concierge-surface` | active | Persistent Concierge + action-driven YAML guide | M24 / M26 |
 | `harness-eval` | active | Friction capture, verdict, owner-response ledger | M25 |
+| `proactive-relationship-loop` | active | Budgeted idle-thread check-ins + delivery ledger | M27 |
+| `cat-life-settings` | active | Global/per-cat Present switches and limits | M27 |
 
 Ordinary increments: `Map delta: none`. New boundaries require updating this table before merge.
 
