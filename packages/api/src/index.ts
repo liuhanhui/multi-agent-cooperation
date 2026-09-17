@@ -9,6 +9,7 @@ import type { AgentProvider } from "./agents/types.js";
 import { loadCatRegistry, type CatRegistry } from "./cats/load-cat-config.js";
 import { buildApp } from "./create-app.js";
 import { resolveEvidenceDbPath } from "./memory/evidence-store.js";
+import { resolveFrictionDbPath } from "./harness/friction-store.js";
 import { createStore } from "./store/create-store.js";
 
 /**
@@ -95,6 +96,8 @@ const app = await buildApp({
   version: "0.0.1",
   // Durable evidence DB (Iron Laws: never unlink this file from tooling).
   evidenceDbPath: resolveEvidenceDbPath(),
+  // Durable lifecycle ledger; API exposes no delete/truncate path.
+  frictionDbPath: resolveFrictionDbPath(),
 });
 
 await app.listen({ port, host: "127.0.0.1" });

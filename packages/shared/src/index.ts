@@ -159,4 +159,20 @@ export {
   type PluginRecord,
   type PluginRuntimeKind,
 } from "./types/plugin.js";
+export {
+  assertFrictionLifecycle,
+  type CaptureFrictionInput,
+  type EvaluateFrictionInput,
+  type FrictionCategory,
+  type FrictionEvent,
+  type FrictionOwnerResponse,
+  type FrictionRecord,
+  type FrictionSeverity,
+  type FrictionSource,
+  type FrictionStatus,
+  type FrictionVerdict,
+  type FrictionVerdictOutcome,
+  type OwnerResponseDisposition,
+  type RespondFrictionInput,
+} from "./types/friction.js";
 

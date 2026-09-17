@@ -28,6 +28,10 @@ import type {
   PluginCallReceipt,
   PluginCatalogEntry,
   PluginRecord,
+  CaptureFrictionInput,
+  EvaluateFrictionInput,
+  FrictionRecord,
+  RespondFrictionInput,
 } from "@mac/shared";
 import {
   activatePlugin,
@@ -37,6 +41,7 @@ import {
   beginCustodyWait,
   bindFeatureThread,
   bindGithubThread,
+  captureFriction,
   callPlugin,
   cancelAwait,
   createEvidence,
@@ -52,6 +57,7 @@ import {
   fetchEvidenceList,
   fetchGithubBindings,
   fetchHealth,
+  fetchFrictions,
   fetchLaneDispositions,
   fetchPluginCatalog,
   fetchPlugins,
@@ -66,6 +72,7 @@ import {
   installPlugin,
   patchRoutingPolicy,
   patchThreadMembers,
+  respondFriction,
   revokePluginCapability,
   searchEvidence,
   simulateGithubSignal,
@@ -73,6 +80,7 @@ import {
   uninstallPlugin,
   wakeAwait,
   writeLane,
+  evaluateFriction,
 } from "../api/endpoints";
 import {
   readActiveThreadId,
@@ -169,6 +177,17 @@ export interface UseWorkspaceDataResult {
     capability: string,
     args?: Record<string, unknown>,
   ) => Promise<void>;
+  frictions: FrictionRecord[];
+  refreshFrictions: () => Promise<void>;
+  captureHubFriction: (input: CaptureFrictionInput) => Promise<void>;
+  evaluateHubFriction: (
+    id: string,
+    input: EvaluateFrictionInput,
+  ) => Promise<void>;
+  respondHubFriction: (
+    id: string,
+    input: RespondFrictionInput,
+  ) => Promise<void>;
   approvalProducers: ApprovalProducerCatalogEntry[];
   pendingApprovals: ApprovalRequest[];
   approvalLedger: ApprovalRequest[];
@@ -229,6 +248,7 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
   const [pluginCatalog, setPluginCatalog] = useState<PluginCatalogEntry[]>([]);
   const [pluginRecords, setPluginRecords] = useState<PluginRecord[]>([]);
   const [pluginReceipts, setPluginReceipts] = useState<PluginCallReceipt[]>([]);
+  const [frictions, setFrictions] = useState<FrictionRecord[]>([]);
   const [activeId, setActiveId] = useState<string | null>(() => readActiveThreadId());
   const [title, setTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -338,6 +358,14 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
     setPluginReceipts(body.receipts);
   }, []);
 
+  /**
+   * Reload the M25 friction lifecycle ledger.
+   * @returns Promise after replacing the local ledger
+   */
+  const refreshFrictions = useCallback(async () => {
+    setFrictions(await fetchFrictions());
+  }, []);
+
   useEffect(() => {
     void refreshReceipts().catch((err: unknown) =>
       setError(err instanceof Error ? err.message : String(err)),
@@ -373,6 +401,12 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
       setError(err instanceof Error ? err.message : String(err)),
     );
   }, [refreshPlugins]);
+
+  useEffect(() => {
+    void refreshFrictions().catch((err: unknown) =>
+      setError(err instanceof Error ? err.message : String(err)),
+    );
+  }, [refreshFrictions]);
 
   useEffect(() => {
     void fetchHealth()
@@ -779,6 +813,64 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
   }
 
   /**
+   * Capture friction and refresh the lifecycle ledger.
+   * @param input - Concrete report and classification
+   * @returns Promise after API mutation and refresh
+   */
+  async function captureHubFriction(
+    input: CaptureFrictionInput,
+  ): Promise<void> {
+    setError(null);
+    try {
+      await captureFriction(input);
+      await refreshFrictions();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      throw err;
+    }
+  }
+
+  /**
+   * Record a verdict and accountable owner.
+   * @param id - Captured friction id
+   * @param input - Verdict details
+   * @returns Promise after API mutation and refresh
+   */
+  async function evaluateHubFriction(
+    id: string,
+    input: EvaluateFrictionInput,
+  ): Promise<void> {
+    setError(null);
+    try {
+      await evaluateFriction(id, input);
+      await refreshFrictions();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      throw err;
+    }
+  }
+
+  /**
+   * Record the assigned owner's response.
+   * @param id - Evaluated friction id
+   * @param input - Owner disposition and note
+   * @returns Promise after API mutation and refresh
+   */
+  async function respondHubFriction(
+    id: string,
+    input: RespondFrictionInput,
+  ): Promise<void> {
+    setError(null);
+    try {
+      await respondFriction(id, input);
+      await refreshFrictions();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      throw err;
+    }
+  }
+
+  /**
    * Mock/external wake for an await id.
    * @param awaitId - Await id
    */
@@ -963,6 +1055,11 @@ export function useWorkspaceData(): UseWorkspaceDataResult {
     grantHubPlugin,
     revokeHubPlugin,
     callHubPlugin,
+    frictions,
+    refreshFrictions,
+    captureHubFriction,
+    evaluateHubFriction,
+    respondHubFriction,
     approvalProducers,
     pendingApprovals,
     approvalLedger,
