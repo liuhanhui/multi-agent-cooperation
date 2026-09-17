@@ -20,6 +20,7 @@ Structure cleanup (`chore/structure-align-cells`): keep Fastify + React; align f
 | `settings/` + `http/routes-settings.ts` | hub-action-surface + routing-context | Hub Settings document + routing policy PATCH |
 | `github/` + `http/routes-github.ts` | github-signals + signal-ingress | Bindings, webhook HMAC, simulate wake |
 | `plugin/` + `http/routes-plugins.ts` | plugin | Catalog, install/activate, grants, call receipts |
+| `harness/` + `http/routes-frictions.ts` | harness-eval | Durable friction lifecycle + HTTP boundary |
 | `callback-auth/` | callback-auth | InvocationCredentialStore + bearer verify |
 | `http/routes-callbacks.ts` | callback-auth | Agent callback ingress + auth-failures |
 | `routing/` | routing-context | mention → catIds policy |
@@ -59,6 +60,8 @@ Structure cleanup (`chore/structure-align-cells`): keep Fastify + React; align f
 | `components/GithubChannelPanel.tsx` | github-signals | Bind PR/issue + simulate wake |
 | `components/PluginsPanel.tsx` | plugin | Catalog install/activate/grants/call |
 | `components/BootcampPanel.tsx` | concierge-surface | 3–5 minute operator onboarding |
+| `components/FrictionPanel.tsx` | harness-eval | Capture, verdict, owner response, audit trail |
+| `components/ui/FormField.tsx` | presentation | Shared labelled inputs, textareas, and selects |
 | `components/` | presentation | Sidebar / ChatPanel / Bubble / Skills / Tools |
 
 ## Shared (`packages/shared/src`)
@@ -75,6 +78,7 @@ Structure cleanup (`chore/structure-align-cells`): keep Fastify + React; align f
 | `types/hub-settings.ts` | HubSettingsDocument / RoutingPolicy / provider accounts |
 | `types/github-signal.ts` | GithubResourceRef / binding / webhook ingress helpers |
 | `types/plugin.ts` | PluginManifest / grants / call receipts / host capabilities |
+| `types/friction.ts` | Friction lifecycle, verdict, owner response, invariant |
 | `mention.ts` | `parseMentions` (routing authority shared with API) |
 | `index.ts` | Barrel re-exports only |
 

@@ -1,0 +1,17 @@
+---
+description: Keep Hub form controls visually consistent across feature panels
+globs: packages/web/src/**/*.tsx
+alwaysApply: false
+---
+
+# Shared Hub Form Controls
+
+- New feature panels must use `FormField`, `TextControl`, `TextAreaControl`, and
+  `SelectControl` from `components/ui/FormField.tsx`.
+- Do not rely on another feature's scoped selector such as
+  `.evidence-form input` to style a new control.
+- Add feature-local CSS only for layout or deliberate visual variants; shared
+  border, spacing, typography, focus, and disabled states belong to
+  `.form-control` and `.form-field`.
+- Verify controls in the narrow catalog rail, including long option text,
+  disabled state, and all lifecycle states rendered after submission.

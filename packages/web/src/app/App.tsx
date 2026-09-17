@@ -17,6 +17,7 @@ import { SettingsPanel } from "../components/SettingsPanel";
 import { GithubChannelPanel } from "../components/GithubChannelPanel";
 import { PluginsPanel } from "../components/PluginsPanel";
 import { BootcampPanel } from "../components/BootcampPanel";
+import { FrictionPanel } from "../components/FrictionPanel";
 import { useThreadSocket } from "../hooks/useThreadSocket";
 import { useWorkspaceData } from "../hooks/useWorkspaceData";
 
@@ -24,6 +25,7 @@ type CatalogTab =
   | "approvals"
   | "ball"
   | "evidence"
+  | "frictions"
   | "github"
   | "lanes"
   | "plugins"
@@ -95,6 +97,11 @@ export function App() {
     grantHubPlugin,
     revokeHubPlugin,
     callHubPlugin,
+    frictions,
+    refreshFrictions,
+    captureHubFriction,
+    evaluateHubFriction,
+    respondHubFriction,
     activeId,
     setActiveId,
     title,
@@ -120,6 +127,7 @@ export function App() {
   const [settingsBusy, setSettingsBusy] = useState(false);
   const [githubBusy, setGithubBusy] = useState(false);
   const [pluginsBusy, setPluginsBusy] = useState(false);
+  const [frictionsBusy, setFrictionsBusy] = useState(false);
   const [catalogTab, setCatalogTab] = useState<CatalogTab>("approvals");
   const messagesEnd = useRef<HTMLDivElement | null>(null);
   const activeThread = threads.find((t) => t.id === activeId) ?? null;
@@ -351,6 +359,7 @@ export function App() {
                 ["ball", "Ball"],
                 ["github", "GitHub"],
                 ["plugins", "Plugins"],
+                ["frictions", "Friction"],
                 ["evidence", "Memory"],
                 ["lanes", "Lanes"],
                 ["receipts", "Receipts"],
@@ -556,6 +565,46 @@ export function App() {
                     await callHubPlugin(id, capability, args);
                   } finally {
                     setPluginsBusy(false);
+                  }
+                }}
+              />
+            ) : null}
+
+            {catalogTab === "frictions" ? (
+              <FrictionPanel
+                frictions={frictions}
+                activeThreadId={activeId}
+                busy={frictionsBusy}
+                onRefresh={async () => {
+                  setFrictionsBusy(true);
+                  try {
+                    await refreshFrictions();
+                  } finally {
+                    setFrictionsBusy(false);
+                  }
+                }}
+                onCapture={async (input) => {
+                  setFrictionsBusy(true);
+                  try {
+                    await captureHubFriction(input);
+                  } finally {
+                    setFrictionsBusy(false);
+                  }
+                }}
+                onEvaluate={async (id, input) => {
+                  setFrictionsBusy(true);
+                  try {
+                    await evaluateHubFriction(id, input);
+                  } finally {
+                    setFrictionsBusy(false);
+                  }
+                }}
+                onRespond={async (id, input) => {
+                  setFrictionsBusy(true);
+                  try {
+                    await respondHubFriction(id, input);
+                  } finally {
+                    setFrictionsBusy(false);
                   }
                 }}
               />

@@ -31,6 +31,10 @@ import type {
   PluginCallReceipt,
   PluginCatalogEntry,
   PluginRecord,
+  CaptureFrictionInput,
+  EvaluateFrictionInput,
+  FrictionRecord,
+  RespondFrictionInput,
 } from "@mac/shared";
 import { apiJson, apiJsonAccept202 } from "./http";
 
@@ -721,4 +725,71 @@ export async function callPlugin(
     },
   );
   return data.receipt;
+}
+
+/**
+ * GET /api/frictions — newest-first M25 lifecycle ledger.
+ * @returns Captured, evaluated, and responded friction records
+ */
+export async function fetchFrictions(): Promise<FrictionRecord[]> {
+  const data = await apiJson<{ frictions: FrictionRecord[] }>("/api/frictions");
+  return data.frictions;
+}
+
+/**
+ * POST /api/frictions — capture a concrete friction.
+ * @param input - Friction source, classification, report, and optional thread
+ * @returns Captured record
+ */
+export async function captureFriction(
+  input: CaptureFrictionInput,
+): Promise<FrictionRecord> {
+  const data = await apiJson<{ friction: FrictionRecord }>("/api/frictions", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return data.friction;
+}
+
+/**
+ * POST /api/frictions/:id/verdict — evaluate and assign an owner.
+ * @param id - Friction id
+ * @param input - Verdict outcome, rationale, evaluator, and owner
+ * @returns Evaluated record
+ */
+export async function evaluateFriction(
+  id: string,
+  input: EvaluateFrictionInput,
+): Promise<FrictionRecord> {
+  const data = await apiJson<{ friction: FrictionRecord }>(
+    `/api/frictions/${id}/verdict`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(input),
+    },
+  );
+  return data.friction;
+}
+
+/**
+ * POST /api/frictions/:id/respond — assigned owner closes the loop.
+ * @param id - Evaluated friction id
+ * @param input - Owner disposition, response note, and actor
+ * @returns Responded record
+ */
+export async function respondFriction(
+  id: string,
+  input: RespondFrictionInput,
+): Promise<FrictionRecord> {
+  const data = await apiJson<{ friction: FrictionRecord }>(
+    `/api/frictions/${id}/respond`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(input),
+    },
+  );
+  return data.friction;
 }

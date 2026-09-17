@@ -6,13 +6,13 @@ Platform layer **above** Agent CLIs so multiple model families work as one team.
 
 ## Status
 
-**Wave 5 / M24** — v1.0 source distribution, one-line setup, and operator Bootcamp.
+**Wave 6 / M25** — durable friction capture, verdict, and accountable owner-response loop.
 
 Roadmap: [`build-plan.md`](./build-plan.md) · Vision: [`docs/VISION.md`](./docs/VISION.md) · Decisions: [`docs/DECISIONS.md`](./docs/DECISIONS.md)
 
 ## Prerequisites
 
-- Node.js 22.13+ (`node:sqlite` is used by evidence memory)
+- Node.js 22.13+ (`node:sqlite` is used by evidence and friction stores)
 - pnpm 9+
 
 ## Quick start

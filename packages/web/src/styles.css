@@ -509,6 +509,159 @@ body::before {
   font-weight: 800;
 }
 
+.friction-capture,
+.friction-action {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.friction-list {
+  gap: 0.65rem;
+}
+
+.friction-card {
+  padding: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 5px 14px rgba(80, 48, 32, 0.04);
+}
+
+.friction-card:last-child {
+  border-bottom: 1px solid var(--line);
+}
+
+.friction-capture textarea,
+.friction-action textarea {
+  min-height: 4rem;
+  resize: vertical;
+}
+
+.friction-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0.6rem 0;
+}
+
+.friction-counts span,
+.friction-status {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.friction-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.friction-title strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.friction-status {
+  flex: 0 0 auto;
+}
+
+.friction-status.responded,
+.friction-response {
+  color: #1f6f64;
+}
+
+.friction-status.evaluated,
+.friction-verdict {
+  color: #8b5c11;
+}
+
+.friction-action {
+  margin: 0.65rem 0;
+  padding: 0.7rem;
+  gap: 0.6rem;
+  border: 1px solid rgba(47, 158, 143, 0.18);
+  border-radius: var(--radius-sm);
+  background: rgba(216, 243, 238, 0.3);
+}
+
+.friction-action-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.5rem;
+}
+
+.friction-action-head strong {
+  font-family: var(--display);
+  font-size: 0.88rem;
+}
+
+.friction-action-head span,
+.form-field-label,
+.form-field-hint {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.form-field {
+  display: grid;
+  min-width: 0;
+  gap: 0.25rem;
+}
+
+.form-field-hint {
+  font-weight: 600;
+}
+
+.form-control {
+  width: 100%;
+  min-width: 0;
+  padding: 0.58rem 0.68rem;
+  border: 1px solid var(--line);
+  border-radius: 0.65rem;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  line-height: 1.35;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+textarea.form-control {
+  min-height: 4rem;
+  resize: vertical;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: rgba(47, 158, 143, 0.55);
+  box-shadow: 0 0 0 3px rgba(47, 158, 143, 0.15);
+}
+
+.form-control:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.friction-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.friction-action-row .form-field {
+  flex: 1 1 9rem;
+}
+
+.friction-action button {
+  justify-self: start;
+}
+
 .err {
   margin: 0;
   padding: 0.55rem 0.75rem;
