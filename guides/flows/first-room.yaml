@@ -1,0 +1,40 @@
+id: first-room
+name: First room tour
+description: Create a room, send an offline-safe message, and discover the Hub.
+
+steps:
+  - id: health
+    target: workspace.health
+    title: Check the lounge
+    tips: Confirm the API health pill is visible and ready.
+    advance: visible
+
+  - id: thread-title
+    target: thread.create.title
+    title: Name a room
+    tips: Type a name for a new conversation room.
+    advance: input
+
+  - id: thread-open
+    target: thread.create.submit
+    title: Open the room
+    tips: Create the room so the cats have a shared workspace.
+    advance: click
+
+  - id: message-input
+    target: chat.composer.input
+    title: Write the first message
+    tips: Type a short hello for the lounge.
+    advance: input
+
+  - id: message-echo
+    target: chat.composer.echo
+    title: Send an offline-safe echo
+    tips: Click Echo and wait for its completed assistant bubble.
+    advance: confirm
+
+  - id: hub-friction
+    target: hub.tab.frictions
+    title: Discover the Hub
+    tips: Open the Friction workspace. This final action completes the tour.
+    advance: click

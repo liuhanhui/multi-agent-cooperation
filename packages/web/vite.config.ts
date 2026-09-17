@@ -1,8 +1,31 @@
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { defineConfig, loadEnv } from "vite";
+import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
+import { parse } from "yaml";
 
 const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
+
+/**
+ * Compile canonical guide YAML into a static browser module at build time.
+ * @returns Vite plugin that handles the private `?guide` query
+ */
+function guideYamlPlugin(): Plugin {
+  return {
+    name: "mac-guide-yaml",
+    enforce: "pre",
+    /**
+     * @param id - Vite module id, including the private query
+     * @returns Generated ESM for guide YAML, or null for unrelated modules
+     */
+    load(id) {
+      if (!id.endsWith(".yaml?guide")) return null;
+      const filePath = id.slice(0, -"?guide".length);
+      const value = parse(readFileSync(filePath, "utf8")) as unknown;
+      return `export default ${JSON.stringify(value)};`;
+    },
+  };
+}
 
 export default defineConfig(({ mode }) => {
   // Vite runs with packages/web as cwd; explicitly read the repo-root .env.
@@ -21,7 +44,7 @@ export default defineConfig(({ mode }) => {
   };
 
   return {
-    plugins: [react()],
+    plugins: [guideYamlPlugin(), react()],
     server: {
       host: "127.0.0.1",
       port: webPort,

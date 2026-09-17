@@ -413,9 +413,12 @@ body::before {
   border-color: transparent;
 }
 
-.bootcamp-launch {
+.concierge-launch {
   margin-left: auto;
-  padding: 0.32rem 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.32rem 0.45rem 0.32rem 0.75rem;
   border-radius: 999px;
   background: var(--honey);
   color: var(--ink);
@@ -423,7 +426,28 @@ body::before {
   font-weight: 800;
 }
 
-.bootcamp-panel {
+.concierge-state {
+  display: grid;
+  place-items: center;
+  min-width: 1.55rem;
+  height: 1.55rem;
+  padding: 0 0.28rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 0.7rem;
+}
+
+.concierge-state.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.concierge-state.completed {
+  background: #1f6f64;
+  color: #fff;
+}
+
+.concierge-panel {
   position: fixed;
   z-index: 40;
   right: 1rem;
@@ -438,19 +462,19 @@ body::before {
   box-shadow: 0 18px 60px rgba(80, 48, 32, 0.18);
 }
 
-.bootcamp-head {
+.concierge-head {
   display: flex;
   justify-content: space-between;
   gap: 0.8rem;
   align-items: flex-start;
 }
 
-.bootcamp-head h2 {
+.concierge-head h2 {
   margin: 0.1rem 0 0;
   font-family: var(--display);
 }
 
-.bootcamp-progress {
+.concierge-progress {
   height: 0.55rem;
   margin: 0.8rem 0;
   overflow: hidden;
@@ -458,7 +482,7 @@ body::before {
   background: rgba(44, 34, 28, 0.08);
 }
 
-.bootcamp-progress span {
+.concierge-progress span {
   display: block;
   height: 100%;
   border-radius: inherit;
@@ -466,47 +490,98 @@ body::before {
   transition: width 0.2s ease;
 }
 
-.bootcamp-steps {
-  display: grid;
-  gap: 0.65rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.concierge-guide,
+.concierge-intro,
+.concierge-complete {
+  margin-top: 0.85rem;
 }
 
-.bootcamp-steps li {
-  display: grid;
-  grid-template-columns: 1.6rem 1fr;
-  gap: 0.55rem;
-  padding: 0.65rem;
-  border: 1px solid var(--line);
+.concierge-progress-copy {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.concierge-guide h3,
+.concierge-complete h3 {
+  margin: 0.35rem 0 0;
+  font-family: var(--display);
+}
+
+.concierge-step-target {
+  color: var(--accent);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.concierge-auto {
+  margin-bottom: 0.75rem;
+  padding: 0.6rem 0.7rem;
   border-radius: var(--radius-sm);
-  background: #fff;
-}
-
-.bootcamp-steps li.done {
   background: var(--accent-soft);
+  color: #1f6f64;
+  font-size: 0.8rem;
+  font-weight: 700;
 }
 
-.bootcamp-check {
+.concierge-complete {
+  text-align: center;
+}
+
+.concierge-complete-mark {
   display: grid;
   place-items: center;
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 2.6rem;
+  height: 2.6rem;
+  margin: 0 auto 0.55rem;
   border-radius: 50%;
-  background: var(--honey);
-  color: var(--ink);
-  font-weight: 800;
-}
-
-.bootcamp-steps li.done .bootcamp-check {
   background: var(--accent);
   color: #fff;
+  font-size: 1.25rem;
+  font-weight: 800;
 }
 
-.bootcamp-finished {
-  color: #1f6f64;
-  font-weight: 800;
+.guide-target-active {
+  position: relative;
+  z-index: 42;
+  outline: 3px solid var(--honey);
+  outline-offset: 4px;
+  box-shadow:
+    0 0 0 8px rgba(240, 179, 90, 0.2),
+    0 10px 28px rgba(80, 48, 32, 0.16);
+  animation: guide-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes guide-pulse {
+  50% {
+    outline-color: var(--accent);
+    box-shadow:
+      0 0 0 10px rgba(47, 158, 143, 0.16),
+      0 10px 28px rgba(80, 48, 32, 0.16);
+  }
+}
+
+@media (max-width: 480px) {
+  .concierge-panel {
+    inset: auto 0.5rem 0.5rem;
+    width: auto;
+    max-height: calc(100dvh - 1rem);
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guide-target-active {
+    animation: none;
+  }
+
+  .concierge-progress span {
+    transition: none;
+  }
 }
 
 .friction-capture,
@@ -941,6 +1016,11 @@ button:active:not(:disabled) {
 button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+button:focus-visible {
+  outline: 3px solid var(--honey);
+  outline-offset: 3px;
 }
 
 button.ghost {

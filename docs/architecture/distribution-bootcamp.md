@@ -31,6 +31,11 @@ Health, thread, and message progress derive from live product state. The two
 educational acknowledgements persist under `mac.bootcamp.v1` in localStorage;
 they are not server truth and do not affect platform behavior.
 
+M26 supersedes this checklist UI with the action-driven Concierge described in
+[`concierge-guide.md`](./concierge-guide.md). The old key is ignored; the new
+guide has one canonical YAML sequence and stores progress under
+`mac.guide.progress.v1`.
+
 ## Acceptance matrix
 
 | AC | Smoke evidence |

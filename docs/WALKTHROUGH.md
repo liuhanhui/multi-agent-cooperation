@@ -6,8 +6,9 @@ Start with:
 pnpm start -- --memory
 ```
 
-Open http://127.0.0.1:4011. The **Operator Bootcamp** opens automatically on
-first use and mirrors the first steps below.
+Open http://127.0.0.1:4011. The **Concierge** opens automatically on first use.
+Choose **Start guided tour**: it highlights the real controls and advances only
+after you complete each action. You can exit, refresh, and resume later.
 
 ## Minute 1 — Health, cats, and a room
 
