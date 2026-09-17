@@ -6,42 +6,49 @@ Platform layer **above** Agent CLIs so multiple model families work as one team.
 
 ## Status
 
-**Wave 3 / M12** — skills manifest with on-demand injection (`feat/m12-skills-manifest`).
+**Wave 5 / M24** — v1.0 source distribution, one-line setup, and operator Bootcamp.
 
 Roadmap: [`build-plan.md`](./build-plan.md) · Vision: [`docs/VISION.md`](./docs/VISION.md) · Decisions: [`docs/DECISIONS.md`](./docs/DECISIONS.md)
 
 ## Prerequisites
 
-- Node.js 20+
+- Node.js 22.13+ (`node:sqlite` is used by evidence memory)
 - pnpm 9+
 
 ## Quick start
 
-```bash
-cp .env.example .env
-pnpm install
-pnpm build
-pnpm start          # API on http://127.0.0.1:4010
+```powershell
+pnpm run setup
+pnpm start -- --memory
 ```
 
-In another terminal:
+Open **http://127.0.0.1:4011**. The API is on **http://127.0.0.1:4010**.
 
-```bash
-pnpm --filter @mac/web dev   # Web on http://127.0.0.1:4011 (proxies /health)
-```
+The setup command installs pinned dependencies, builds all packages, and runs
+the safety/type checks. It does **not** write `.env`, `agent-config.json`, or MCP
+config. Memory mode needs no Redis and is the recommended first run.
 
-Or both:
-
-```bash
-pnpm dev
-```
+Detailed setup: [`SETUP.md`](./SETUP.md)
+3–5 minute product tour: [`docs/WALKTHROUGH.md`](./docs/WALKTHROUGH.md)
 
 Check:
 
-```bash
-curl -s http://127.0.0.1:4010/health
+```powershell
+pnpm run doctor
+pnpm run doctor:live
+pnpm run smoke
 pnpm check
 ```
+
+Development mode with hot reload:
+
+```powershell
+pnpm dev
+```
+
+Provider configuration is optional for the Echo smoke path. To invoke real
+agents, copy `.env.example` to `.env` yourself and configure Claude Code, Codex,
+or Antigravity as described in `SETUP.md`.
 
 ## Packages
 

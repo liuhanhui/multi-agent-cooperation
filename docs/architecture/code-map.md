@@ -7,6 +7,7 @@ Structure cleanup (`chore/structure-align-cells`): keep Fastify + React; align f
 | Path | Cell | Role |
 |---|---|---|
 | `create-app.ts` | scaffold | Wire deps + register route modules |
+| repo `scripts/setup.mjs`, `doctor.mjs`, `start.mjs` | distribution | Install/build/check, diagnose, launch API + Web |
 | `http/routes-meta.ts` | scaffold | `/health`, `/` |
 | `http/routes-cats.ts` | identity-session | `GET /api/cats` |
 | `http/routes-threads.ts` | transport / identity-session | threads + messages REST |
@@ -57,6 +58,7 @@ Structure cleanup (`chore/structure-align-cells`): keep Fastify + React; align f
 | `components/SettingsPanel.tsx` | hub-action-surface + routing-context | Settings nav + accounts + Rules routing |
 | `components/GithubChannelPanel.tsx` | github-signals | Bind PR/issue + simulate wake |
 | `components/PluginsPanel.tsx` | plugin | Catalog install/activate/grants/call |
+| `components/BootcampPanel.tsx` | concierge-surface | 3–5 minute operator onboarding |
 | `components/` | presentation | Sidebar / ChatPanel / Bubble / Skills / Tools |
 
 ## Shared (`packages/shared/src`)
