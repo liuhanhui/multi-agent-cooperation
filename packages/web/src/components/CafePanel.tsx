@@ -1,6 +1,5 @@
 import type { CatConfig, Message, Thread } from "@mac/shared";
-import type { CSSProperties } from "react";
-import { avatarInitials, avatarTone } from "../chat/avatar";
+import { resolveCatBreed } from "../chat/cat-breed";
 import {
   deriveCafeScene,
   type CafeCatPlace,
@@ -8,6 +7,7 @@ import {
 } from "../features/cafe/cafe-scene";
 import type { WsState } from "../hooks/useThreadSocket";
 import type { VisibleCafeRuntime } from "../hooks/useVisibleCafeRuntime";
+import { CatPortrait } from "./CatPortrait";
 
 interface CafePanelProps {
   cats: CatConfig[];
@@ -164,25 +164,21 @@ function CafeZone({ place, label, cats }: CafeZoneProps) {
  * @returns Cat figure whose animation is controlled only by projected mood
  */
 function CafeCatFigure({ cat }: { cat: CafeCatScene }) {
+  const breed = resolveCatBreed(cat.catId);
   return (
     <article
-      className={`cafe-cat mood-${cat.mood}`}
-      aria-label={`${cat.displayName}: ${cat.detail}`}
+      className={`cafe-cat mood-${cat.mood} breed-${breed.breedId}`}
+      aria-label={`${cat.displayName} (${breed.breedLabel}): ${cat.detail}`}
     >
-      <div
-        className="cafe-cat-face"
-        style={{ "--cat-tone": avatarTone(cat.catId) } as CSSProperties}
-        aria-hidden="true"
-      >
-        <span className="cafe-cat-ear left" />
-        <span className="cafe-cat-ear right" />
-        <span className="cafe-cat-initials">
-          {avatarInitials(cat.displayName)}
-        </span>
-        <span className="cafe-cat-tail" />
-      </div>
+      <CatPortrait
+        catId={cat.catId}
+        displayName={cat.displayName}
+        size="lg"
+        className="cafe-cat-portrait"
+      />
       <div className="cafe-cat-copy">
         <strong>{cat.displayName}</strong>
+        <em>{breed.breedLabel}</em>
         <span>{cat.detail}</span>
       </div>
     </article>

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { HubBlockAction } from "@mac/shared";
 import { invokeMessage, postMessageAction, streamEchoMessage } from "../api/endpoints";
-import { avatarInitials, avatarTone } from "../chat/avatar";
+import { resolveCatBreed } from "../chat/cat-breed";
+import { CatPortrait } from "../components/CatPortrait";
 import { mentionSuggestion, parseMentions } from "../chat/mention";
 import { ChatPanel } from "../components/ChatPanel";
 import { EvidencePanel } from "../components/EvidencePanel";
@@ -264,14 +265,23 @@ export function App() {
             </p>
           </div>
           <div className="crew" aria-label="Crew">
-            {cats.map((c) => (
-              <span key={c.id} className="crew-chip" data-cat={c.id}>
-                <span className="crew-dot" style={{ background: avatarTone(c.id) }}>
-                  {avatarInitials(c.displayName)}
+            {cats.map((c) => {
+              const breed = resolveCatBreed(c.id);
+              return (
+                <span key={c.id} className="crew-chip" data-cat={c.id}>
+                  <CatPortrait
+                    catId={c.id}
+                    displayName={c.displayName}
+                    size="sm"
+                    className="crew-cat-portrait"
+                  />
+                  <span className="crew-copy">
+                    <strong>{c.displayName}</strong>
+                    <small>{breed.breedLabel}</small>
+                  </span>
                 </span>
-                {c.displayName}
-              </span>
-            ))}
+              );
+            })}
           </div>
         </div>
 

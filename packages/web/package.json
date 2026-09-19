@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -p tsconfig.json --noEmit && vite build",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --import tsx --test src/chat/bubble-reducer.test.ts src/chat/mention.test.ts src/features/guide/guide-state.test.ts src/features/guide/guide-confirm.test.ts src/features/cafe/cafe-scene.test.ts",
+    "test": "node --import tsx --test src/chat/bubble-reducer.test.ts src/chat/mention.test.ts src/chat/cat-breed.test.ts src/features/guide/guide-state.test.ts src/features/guide/guide-confirm.test.ts src/features/cafe/cafe-scene.test.ts",
     "check": "node scripts/check-guides.mjs",
     "preview": "vite preview"
   },

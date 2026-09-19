@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import type { CatConfig, HubBlockAction, Message } from "@mac/shared";
 import { avatarInitials, avatarTone } from "../chat/avatar";
+import { resolveCatBreed } from "../chat/cat-breed";
+import { CatPortrait } from "./CatPortrait";
 import { ContentBlocks } from "./ContentBlocks";
 
 interface BubbleProps {
@@ -32,7 +34,7 @@ function formatElapsed(totalSeconds: number): string {
 export function Bubble({ message, cats, onBlockAction, actionBusy }: BubbleProps) {
   const cat = cats.find((c) => c.id === message.authorId);
   const label = cat?.displayName ?? message.authorId;
-  const tone = avatarTone(message.authorId);
+  const breed = cat ? resolveCatBreed(message.authorId) : null;
   const inFlight = message.status === "pending" || message.status === "streaming";
   const [now, setNow] = useState(() => Date.now());
 
@@ -72,12 +74,30 @@ export function Bubble({ message, cats, onBlockAction, actionBusy }: BubbleProps
   return (
     <article className={`bubble ${message.role}`} data-message-id={message.id}>
       <div className="bubble-row">
-        <span className="avatar" style={{ background: tone }} aria-hidden="true">
-          {avatarInitials(label)}
-        </span>
+        {breed ? (
+          <CatPortrait
+            catId={message.authorId}
+            displayName={label}
+            size="md"
+            className="bubble-cat-portrait"
+          />
+        ) : (
+          <span
+            className="avatar"
+            style={{ background: avatarTone(message.authorId) }}
+            aria-hidden="true"
+          >
+            {avatarInitials(label)}
+          </span>
+        )}
         <div className="bubble-body">
           <header>
-            <span className="author">{label}</span>
+            <span className="author">
+              {label}
+              {breed ? (
+                <span className="author-breed">{breed.breedLabel}</span>
+              ) : null}
+            </span>
             <span className="muted">
               #{message.seq} · {message.status}
               {inFlight ? ` · ${formatElapsed(elapsedSec)}` : ""}

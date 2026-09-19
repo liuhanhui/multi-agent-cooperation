@@ -339,47 +339,77 @@ body::before {
   background: #fff;
 }
 
-.crew-dot {
-  position: relative;
-  width: 1.55rem;
-  height: 1.55rem;
-  border-radius: 50%;
+.crew-copy {
   display: grid;
+  line-height: 1.1;
+}
+
+.crew-copy strong {
+  font-size: 0.78rem;
+}
+
+.crew-copy small {
+  color: var(--muted);
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+
+/* Breed portraits — Maine Coon / Siamese / British Shorthair illustrations */
+.cat-portrait {
+  --cat-coat: #2f9e8f;
+  background:
+    radial-gradient(circle at 35% 28%, rgba(255, 255, 255, 0.55), transparent 42%),
+    var(--cat-coat);
+  border: 2px solid rgba(255, 255, 255, 0.92);
+  border-radius: 50%;
+  box-shadow:
+    inset 0 -0.12rem 0.22rem rgba(80, 48, 32, 0.08),
+    0 0.18rem 0.35rem rgba(80, 48, 32, 0.12);
+  display: inline-grid;
+  flex: 0 0 auto;
+  overflow: hidden;
   place-items: center;
-  font-size: 0.65rem;
-  font-weight: 800;
-  color: #fff;
 }
 
-.crew-dot::before,
-.crew-dot::after {
-  content: "";
-  position: absolute;
-  top: -0.28rem;
-  width: 0.48rem;
-  height: 0.55rem;
-  background: inherit;
-  border-radius: 40% 40% 18% 18%;
+.cat-portrait.size-sm {
+  height: 1.9rem;
+  width: 1.9rem;
 }
 
-.crew-dot::before {
-  left: 0.05rem;
-  transform: rotate(-20deg);
+.cat-portrait.size-md {
+  height: 2.6rem;
+  width: 2.6rem;
 }
 
-.crew-dot::after {
-  right: 0.05rem;
-  transform: rotate(20deg);
+.cat-portrait.size-lg {
+  height: 4.35rem;
+  width: 4.35rem;
 }
 
-.crew-chip[data-cat="architect"] .crew-dot {
-  background: #2f9e8f;
+.cat-portrait-img {
+  display: block;
+  height: 118%;
+  object-fit: cover;
+  object-position: center 18%;
+  width: 118%;
 }
-.crew-chip[data-cat="reviewer"] .crew-dot {
-  background: #7eb6d9;
+
+.bubble-cat-portrait,
+.crew-cat-portrait,
+.cafe-cat-portrait {
+  filter: none;
 }
-.crew-chip[data-cat="builder"] .crew-dot {
-  background: #e8846b;
+
+.cafe-cat-portrait:hover,
+.crew-chip:hover .crew-cat-portrait {
+  animation: soft-bob 0.9s ease-in-out infinite;
+}
+
+.author-breed {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  margin-left: 0.35rem;
 }
 
 .status-bar {
@@ -1928,53 +1958,6 @@ button.ghost {
   text-align: center;
 }
 
-.cafe-cat-face {
-  align-items: center;
-  background: var(--cat-tone);
-  border: 3px solid rgba(255, 255, 255, 0.72);
-  border-radius: 48% 48% 42% 42%;
-  box-shadow: 0 0.3rem 0.7rem rgba(80, 48, 32, 0.14);
-  color: #fff;
-  display: flex;
-  font-size: 0.68rem;
-  font-weight: 900;
-  height: 2.65rem;
-  justify-content: center;
-  position: relative;
-  width: 2.8rem;
-}
-
-.cafe-cat-ear {
-  background: var(--cat-tone);
-  height: 1rem;
-  position: absolute;
-  top: -0.48rem;
-  transform: rotate(45deg);
-  width: 1rem;
-  z-index: -1;
-}
-
-.cafe-cat-ear.left {
-  left: 0.16rem;
-}
-
-.cafe-cat-ear.right {
-  right: 0.16rem;
-}
-
-.cafe-cat-tail {
-  border: 0.28rem solid var(--cat-tone);
-  border-left-color: transparent;
-  border-radius: 50%;
-  bottom: -0.35rem;
-  height: 1.15rem;
-  position: absolute;
-  right: -0.72rem;
-  transform: rotate(18deg);
-  width: 1rem;
-  z-index: -1;
-}
-
 .cafe-cat-copy {
   display: grid;
   line-height: 1.12;
@@ -1987,28 +1970,29 @@ button.ghost {
   text-overflow: ellipsis;
 }
 
+.cafe-cat-copy em {
+  color: var(--coral);
+  font-size: 0.55rem;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
 .cafe-cat-copy span {
   color: rgba(44, 34, 28, 0.62);
   font-size: 0.58rem;
 }
 
-.cafe-cat.mood-working .cafe-cat-face {
+.cafe-cat.mood-working .cafe-cat-portrait {
   animation: cafe-work 1.2s ease-in-out infinite;
-  box-shadow:
-    0 0 0 0.22rem rgba(47, 158, 143, 0.16),
-    0 0.3rem 0.7rem rgba(80, 48, 32, 0.14);
 }
 
-.cafe-cat.mood-queued .cafe-cat-face {
-  box-shadow:
-    0 0 0 0.22rem rgba(240, 179, 90, 0.18),
-    0 0.3rem 0.7rem rgba(80, 48, 32, 0.14);
+.cafe-cat.mood-queued .cafe-cat-portrait {
+  filter: drop-shadow(0 0 0.35rem rgba(240, 179, 90, 0.55));
 }
 
-.cafe-cat.mood-error .cafe-cat-face {
-  box-shadow:
-    0 0 0 0.22rem rgba(196, 92, 74, 0.17),
-    0 0.3rem 0.7rem rgba(80, 48, 32, 0.14);
+.cafe-cat.mood-error .cafe-cat-portrait {
+  filter: drop-shadow(0 0 0.35rem rgba(196, 92, 74, 0.45));
 }
 
 .cafe-cat.mood-away {
@@ -2157,7 +2141,12 @@ button.ghost {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cafe-cat.mood-working .cafe-cat-face {
+  .cafe-cat.mood-working .cafe-cat-portrait {
+    animation: none;
+  }
+
+  .cafe-cat-portrait:hover,
+  .crew-chip:hover .crew-cat-portrait {
     animation: none;
   }
 
