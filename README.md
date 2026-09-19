@@ -6,7 +6,7 @@ Platform layer **above** Agent CLIs so multiple model families work as one team.
 
 ## Status
 
-**Wave 6 / M27** — opt-in, budgeted proactive cat check-ins with an immediate off switch.
+**Wave 6 / M28** — Visible Café renders the selected room's live state without a second source of truth.
 
 Roadmap: [`build-plan.md`](./build-plan.md) · Vision: [`docs/VISION.md`](./docs/VISION.md) · Decisions: [`docs/DECISIONS.md`](./docs/DECISIONS.md)
 

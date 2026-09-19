@@ -52,6 +52,7 @@ Structure cleanup (`chore/structure-align-cells`): keep Fastify + React; align f
 | `chat/` | bubble-pipeline | reducer, avatar, mention re-export |
 | `features/session/` | thread-navigation | active thread sessionStorage |
 | `features/guide/` + repo `guides/` | concierge-surface | YAML catalog, progress state, target-driven engine |
+| `features/cafe/` + `hooks/useVisibleCafeRuntime.ts` | visible-cafe-render | Pure scene projection + cache of existing dispatch reads |
 | `components/MissionBoard.tsx` | portable-governance | Mission columns + create/advance/bind |
 | `components/EvidencePanel.tsx` | memory | Evidence write / BM25 search |
 | `components/WriteLanesPanel.tsx` | memory | Lane write + conflict disposition |
@@ -64,6 +65,7 @@ Structure cleanup (`chore/structure-align-cells`): keep Fastify + React; align f
 | `components/ConciergePanel.tsx` | concierge-surface | Persistent launcher + resumable guide HUD |
 | `components/FrictionPanel.tsx` | harness-eval | Capture, verdict, owner response, audit trail |
 | `components/PresentPanel.tsx` | proactive-relationship-loop + cat-life-settings | Master/per-cat controls, limits, usage, activity |
+| `components/CafePanel.tsx` | visible-cafe-render | Read-only selected-room visualization |
 | `components/ui/FormField.tsx` | presentation | Shared labelled inputs, textareas, and selects |
 | `components/` | presentation | Sidebar / ChatPanel / Bubble / Skills / Tools |
 

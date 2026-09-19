@@ -19,8 +19,10 @@ import { PluginsPanel } from "../components/PluginsPanel";
 import { ConciergePanel } from "../components/ConciergePanel";
 import { FrictionPanel } from "../components/FrictionPanel";
 import { PresentPanel } from "../components/PresentPanel";
+import { CafePanel } from "../components/CafePanel";
 import { useThreadSocket } from "../hooks/useThreadSocket";
 import { useWorkspaceData } from "../hooks/useWorkspaceData";
+import { useVisibleCafeRuntime } from "../hooks/useVisibleCafeRuntime";
 import {
   findGuidedEchoSettlement,
   type GuidedEchoScope,
@@ -29,6 +31,7 @@ import {
 type CatalogTab =
   | "approvals"
   | "ball"
+  | "cafe"
   | "evidence"
   | "frictions"
   | "github"
@@ -141,6 +144,10 @@ export function App() {
   const [frictionsBusy, setFrictionsBusy] = useState(false);
   const [presentBusy, setPresentBusy] = useState(false);
   const [catalogTab, setCatalogTab] = useState<CatalogTab>("approvals");
+  const cafeRuntime = useVisibleCafeRuntime(
+    activeId,
+    catalogTab === "cafe",
+  );
   const messagesEnd = useRef<HTMLDivElement | null>(null);
   const guideEchoScope = useRef<GuidedEchoScope | null>(null);
   const activeThread = threads.find((t) => t.id === activeId) ?? null;
@@ -401,6 +408,7 @@ export function App() {
                 ["plugins", "Plugins"],
                 ["frictions", "Friction"],
                 ["present", "Present"],
+                ["cafe", "Café"],
                 ["evidence", "Memory"],
                 ["lanes", "Lanes"],
                 ["receipts", "Receipts"],
@@ -685,6 +693,16 @@ export function App() {
                     setPresentBusy(false);
                   }
                 }}
+              />
+            ) : null}
+
+            {catalogTab === "cafe" ? (
+              <CafePanel
+                cats={cats}
+                thread={activeThread}
+                messages={messages}
+                wsState={wsState}
+                runtime={cafeRuntime}
               />
             ) : null}
 
