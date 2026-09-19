@@ -37,6 +37,8 @@ import type {
   RespondFrictionInput,
   PresentSnapshot,
   PresentTickResult,
+  QueueEntry,
+  TurnExecution,
   UpdatePresentPolicyInput,
 } from "@mac/shared";
 import { apiJson, apiJsonAccept202 } from "./http";
@@ -138,6 +140,35 @@ export function invokeMessage(threadId: string, content: string): Promise<unknow
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ content }),
   });
+}
+
+/**
+ * List canonical invocation queue entries for one thread.
+ * @param threadId - Thread whose dispatch state should be projected
+ * @returns Newest-first queue entries from InvocationDispatcher
+ */
+export async function fetchThreadInvocations(
+  threadId: string,
+): Promise<QueueEntry[]> {
+  const body = await apiJson<{ entries: QueueEntry[] }>(
+    `/api/threads/${threadId}/invocations`,
+  );
+  return body.entries;
+}
+
+/**
+ * Fetch canonical per-cat turns for one invocation.
+ * @param threadId - Thread that owns the invocation
+ * @param entryId - Queue entry whose exact running turn is needed
+ * @returns Queue entry and its ordered TurnExecution rows
+ */
+export function fetchInvocation(
+  threadId: string,
+  entryId: string,
+): Promise<{ entry: QueueEntry; turns: TurnExecution[] }> {
+  return apiJson<{ entry: QueueEntry; turns: TurnExecution[] }>(
+    `/api/threads/${threadId}/invocations/${entryId}`,
+  );
 }
 
 /**

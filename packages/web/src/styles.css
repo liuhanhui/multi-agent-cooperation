@@ -1636,3 +1636,532 @@ button.ghost {
   padding: 0.25rem 0.45rem;
   font-size: 0.72rem;
 }
+
+/* ——— M28 Visible Café: a read-only projection of canonical runtime state ——— */
+.cafe-panel {
+  --cafe-wood: #9a6248;
+  --cafe-cream: #fff8ec;
+  gap: 0.85rem;
+}
+
+.cafe-head {
+  align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+}
+
+.cafe-head h2 {
+  margin: 0.08rem 0 0.2rem;
+}
+
+.cafe-head .eyebrow {
+  color: var(--coral);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.cafe-live-badge {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 0.68rem;
+  font-weight: 800;
+  gap: 0.35rem;
+  padding: 0.3rem 0.48rem;
+}
+
+.cafe-source-badges {
+  display: grid;
+  gap: 0.25rem;
+  justify-items: end;
+}
+
+.cafe-live-badge > span {
+  background: #b9afa8;
+  border-radius: 50%;
+  height: 0.45rem;
+  width: 0.45rem;
+}
+
+.cafe-live-badge.live > span {
+  background: var(--accent);
+  box-shadow: 0 0 0 0.2rem rgba(47, 158, 143, 0.14);
+}
+
+.cafe-live-badge.connecting > span {
+  background: var(--honey);
+}
+
+.cafe-live-badge.down > span {
+  background: var(--err);
+}
+
+.cafe-live-badge.dispatch-ready > span {
+  background: var(--accent);
+}
+
+.cafe-live-badge.dispatch-loading > span {
+  animation: cafe-work 1.2s ease-in-out infinite;
+  background: var(--honey);
+}
+
+.cafe-live-badge.dispatch-unavailable > span {
+  background: var(--err);
+}
+
+.cafe-stage {
+  background:
+    linear-gradient(180deg, rgba(228, 242, 251, 0.94) 0 36%, transparent 36%),
+    linear-gradient(180deg, #f8dfc0 36% 72%, #d9ae80 72%);
+  border: 1px solid rgba(101, 65, 46, 0.16);
+  border-radius: 1rem;
+  display: grid;
+  gap: 0.65rem;
+  grid-template-areas:
+    "sign sign"
+    "window window"
+    "desk cushion";
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-height: 24rem;
+  overflow: hidden;
+  padding: 0.75rem;
+  position: relative;
+}
+
+.cafe-stage::after {
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 0.86rem;
+  content: "";
+  inset: 0.3rem;
+  pointer-events: none;
+  position: absolute;
+}
+
+.cafe-stage.phase-live {
+  box-shadow: inset 0 0 0 2px rgba(47, 158, 143, 0.13);
+}
+
+.cafe-stage.phase-attention {
+  box-shadow: inset 0 0 0 2px rgba(196, 92, 74, 0.16);
+}
+
+.cafe-sky {
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  position: absolute;
+}
+
+.cafe-cloud {
+  background: rgba(255, 255, 255, 0.56);
+  border-radius: 999px;
+  height: 0.75rem;
+  position: absolute;
+  width: 2.7rem;
+}
+
+.cafe-cloud::before,
+.cafe-cloud::after {
+  background: inherit;
+  border-radius: 50%;
+  content: "";
+  position: absolute;
+}
+
+.cafe-cloud::before {
+  height: 1rem;
+  left: 0.45rem;
+  top: -0.45rem;
+  width: 1rem;
+}
+
+.cafe-cloud::after {
+  height: 1.25rem;
+  right: 0.38rem;
+  top: -0.65rem;
+  width: 1.25rem;
+}
+
+.cloud-one {
+  left: 8%;
+  top: 11%;
+}
+
+.cloud-two {
+  right: 8%;
+  top: 21%;
+  transform: scale(0.76);
+}
+
+.cafe-room-sign {
+  align-items: center;
+  background: rgba(255, 251, 247, 0.9);
+  border: 1px solid rgba(44, 34, 28, 0.1);
+  border-radius: 0.7rem;
+  display: flex;
+  gap: 0.4rem;
+  grid-area: sign;
+  justify-content: space-between;
+  padding: 0.45rem 0.58rem;
+  position: relative;
+  z-index: 1;
+}
+
+.cafe-room-sign span {
+  font-family: var(--display);
+  font-size: 0.82rem;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cafe-room-sign small {
+  color: var(--accent);
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.cafe-zone {
+  min-height: 7.4rem;
+  padding: 1.7rem 0.35rem 0.45rem;
+  position: relative;
+  z-index: 1;
+}
+
+.cafe-zone-window {
+  grid-area: window;
+}
+
+.cafe-zone-desk {
+  grid-area: desk;
+}
+
+.cafe-zone-cushion {
+  grid-area: cushion;
+}
+
+.cafe-zone-label {
+  color: rgba(44, 34, 28, 0.58);
+  font-size: 0.61rem;
+  font-weight: 800;
+  left: 0.4rem;
+  letter-spacing: 0.05em;
+  position: absolute;
+  text-transform: uppercase;
+  top: 0.2rem;
+}
+
+.cafe-furniture {
+  bottom: 0.35rem;
+  left: 0.2rem;
+  opacity: 0.72;
+  pointer-events: none;
+  position: absolute;
+  right: 0.2rem;
+}
+
+.cafe-furniture-window {
+  background:
+    linear-gradient(90deg, transparent 48%, rgba(93, 128, 144, 0.28) 48% 52%, transparent 52%),
+    linear-gradient(180deg, transparent 47%, rgba(93, 128, 144, 0.28) 47% 53%, transparent 53%),
+    rgba(255, 255, 255, 0.34);
+  border: 0.3rem solid rgba(113, 91, 77, 0.46);
+  border-radius: 0.25rem;
+  height: 5.8rem;
+  left: 11%;
+  right: 11%;
+}
+
+.cafe-furniture-desk {
+  background: var(--cafe-wood);
+  border-radius: 0.45rem 0.45rem 0.2rem 0.2rem;
+  height: 2.4rem;
+}
+
+.cafe-furniture-desk::after {
+  background: rgba(91, 53, 39, 0.48);
+  bottom: -1.1rem;
+  content: "";
+  height: 1.2rem;
+  left: 14%;
+  position: absolute;
+  right: 14%;
+}
+
+.cafe-furniture-cushion {
+  background: var(--coral-soft);
+  border: 2px solid rgba(232, 132, 107, 0.25);
+  border-radius: 50%;
+  height: 2.1rem;
+  left: 8%;
+  right: 8%;
+}
+
+.cafe-zone-cats {
+  align-items: flex-end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.32rem;
+  justify-content: center;
+  min-height: 5rem;
+  position: relative;
+  z-index: 2;
+}
+
+.cafe-cat {
+  align-items: center;
+  display: flex;
+  flex: 1 1 4.5rem;
+  flex-direction: column;
+  gap: 0.28rem;
+  max-width: 6.6rem;
+  min-width: 4.5rem;
+  text-align: center;
+}
+
+.cafe-cat-face {
+  align-items: center;
+  background: var(--cat-tone);
+  border: 3px solid rgba(255, 255, 255, 0.72);
+  border-radius: 48% 48% 42% 42%;
+  box-shadow: 0 0.3rem 0.7rem rgba(80, 48, 32, 0.14);
+  color: #fff;
+  display: flex;
+  font-size: 0.68rem;
+  font-weight: 900;
+  height: 2.65rem;
+  justify-content: center;
+  position: relative;
+  width: 2.8rem;
+}
+
+.cafe-cat-ear {
+  background: var(--cat-tone);
+  height: 1rem;
+  position: absolute;
+  top: -0.48rem;
+  transform: rotate(45deg);
+  width: 1rem;
+  z-index: -1;
+}
+
+.cafe-cat-ear.left {
+  left: 0.16rem;
+}
+
+.cafe-cat-ear.right {
+  right: 0.16rem;
+}
+
+.cafe-cat-tail {
+  border: 0.28rem solid var(--cat-tone);
+  border-left-color: transparent;
+  border-radius: 50%;
+  bottom: -0.35rem;
+  height: 1.15rem;
+  position: absolute;
+  right: -0.72rem;
+  transform: rotate(18deg);
+  width: 1rem;
+  z-index: -1;
+}
+
+.cafe-cat-copy {
+  display: grid;
+  line-height: 1.12;
+  max-width: 100%;
+}
+
+.cafe-cat-copy strong {
+  font-size: 0.68rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cafe-cat-copy span {
+  color: rgba(44, 34, 28, 0.62);
+  font-size: 0.58rem;
+}
+
+.cafe-cat.mood-working .cafe-cat-face {
+  animation: cafe-work 1.2s ease-in-out infinite;
+  box-shadow:
+    0 0 0 0.22rem rgba(47, 158, 143, 0.16),
+    0 0.3rem 0.7rem rgba(80, 48, 32, 0.14);
+}
+
+.cafe-cat.mood-queued .cafe-cat-face {
+  box-shadow:
+    0 0 0 0.22rem rgba(240, 179, 90, 0.18),
+    0 0.3rem 0.7rem rgba(80, 48, 32, 0.14);
+}
+
+.cafe-cat.mood-error .cafe-cat-face {
+  box-shadow:
+    0 0 0 0.22rem rgba(196, 92, 74, 0.17),
+    0 0.3rem 0.7rem rgba(80, 48, 32, 0.14);
+}
+
+.cafe-cat.mood-away {
+  opacity: 0.62;
+}
+
+@keyframes cafe-work {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-1deg);
+  }
+  50% {
+    transform: translateY(-0.28rem) rotate(1deg);
+  }
+}
+
+.cafe-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.6rem;
+}
+
+.cafe-legend span {
+  align-items: center;
+  color: var(--muted);
+  display: inline-flex;
+  font-size: 0.63rem;
+  gap: 0.25rem;
+}
+
+.cafe-legend i {
+  background: #b9afa8;
+  border-radius: 50%;
+  height: 0.42rem;
+  width: 0.42rem;
+}
+
+.cafe-legend i.ready {
+  background: var(--accent);
+}
+
+.cafe-legend i.working {
+  background: var(--honey);
+}
+
+.cafe-legend i.queued {
+  background: var(--sky);
+}
+
+.cafe-legend i.error {
+  background: var(--err);
+}
+
+.cafe-activity {
+  border-top: 1px dashed var(--line);
+  padding-top: 0.7rem;
+}
+
+.cafe-section-title {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.cafe-section-title > span {
+  color: var(--muted);
+  font-size: 0.62rem;
+}
+
+.cafe-activity ol {
+  display: grid;
+  gap: 0.42rem;
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+}
+
+.cafe-activity li {
+  align-items: flex-start;
+  display: flex;
+  gap: 0.45rem;
+}
+
+.cafe-activity-dot {
+  background: var(--accent);
+  border-radius: 50%;
+  flex: 0 0 auto;
+  height: 0.48rem;
+  margin-top: 0.28rem;
+  width: 0.48rem;
+}
+
+.cafe-activity-dot.pending,
+.cafe-activity-dot.streaming {
+  background: var(--honey);
+}
+
+.cafe-activity-dot.failed {
+  background: var(--err);
+}
+
+.cafe-activity li div {
+  min-width: 0;
+}
+
+.cafe-activity li strong {
+  display: block;
+  font-size: 0.7rem;
+}
+
+.cafe-activity li p {
+  color: var(--muted);
+  display: -webkit-box;
+  font-size: 0.66rem;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  line-height: 1.3;
+  margin: 0.05rem 0 0;
+  overflow: hidden;
+}
+
+.cafe-no-activity,
+.cafe-truth-note {
+  font-size: 0.66rem;
+  line-height: 1.35;
+  margin: 0.45rem 0 0;
+}
+
+.cafe-truth-note {
+  background: var(--accent-soft);
+  border-radius: 0.65rem;
+  color: #286b63;
+  padding: 0.5rem 0.6rem;
+}
+
+@media (min-width: 1101px) {
+  .cafe-stage {
+    grid-template-areas:
+      "sign"
+      "window"
+      "desk"
+      "cushion";
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cafe-cat.mood-working .cafe-cat-face {
+    animation: none;
+  }
+
+  .cafe-live-badge.dispatch-loading > span {
+    animation: none;
+  }
+}

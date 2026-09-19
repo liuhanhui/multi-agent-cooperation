@@ -74,6 +74,15 @@ Present relationship loop:
 4. Click again and confirm that user message cannot trigger twice.
 5. Turn the master switch off.
 
+Visible Café:
+
+1. Open **Café** and select a thread.
+2. Confirm the default cat is at the lead desk, members are on cushions, and
+   non-members remain by the window.
+3. Invoke multiple cats and watch the existing dispatch queue distinguish the
+   running cat from later queued cats; completion returns it to ready.
+4. Change the default cat and confirm the desk follows the thread contract.
+
 Finally:
 
 ```powershell
