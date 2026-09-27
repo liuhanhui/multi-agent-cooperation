@@ -12,6 +12,7 @@ import { resolveEvidenceDbPath } from "./memory/evidence-store.js";
 import { resolveFrictionDbPath } from "./harness/friction-store.js";
 import { resolvePresentDbPath } from "./present/present-store.js";
 import { createStore } from "./store/create-store.js";
+import { resolveUsageDbPath } from "./usage/usage-store.js";
 
 /**
  * Resolve `.env` for monorepo: `pnpm --filter @mac/api` runs with cwd=packages/api,
@@ -58,15 +59,16 @@ function loadEnvFile() {
  */
 function createAgent(cats: CatRegistry): AgentProvider {
   const kind = (process.env.MAC_AGENT_PROVIDER ?? "claude-code").toLowerCase();
+  // Offline demo cats report estimated usage so the Usage panel is never blank.
   if (kind === "fake") {
-    return createFakeAgentProvider();
+    return createFakeAgentProvider({ estimateUsage: true });
   }
 
   const providers: Record<string, AgentProvider> = {
     "claude-code": createClaudeCodeProvider(),
     codex: createCodexProvider(),
     antigravity: createAntigravityProvider(),
-    fake: createFakeAgentProvider(),
+    fake: createFakeAgentProvider({ estimateUsage: true }),
   };
 
   const defaultProviderId = providers[kind] ? kind : "claude-code";
@@ -101,6 +103,8 @@ const app = await buildApp({
   frictionDbPath: resolveFrictionDbPath(),
   // Opt-in proactive policy + immutable attempt ledger survive restarts.
   presentDbPath: resolvePresentDbPath(),
+  // Append-only token ledger; survives restarts even when MAC_STORE=memory.
+  usageDbPath: resolveUsageDbPath(),
 });
 
 await app.listen({ port, host: "127.0.0.1" });

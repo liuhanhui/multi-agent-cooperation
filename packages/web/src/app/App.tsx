@@ -21,6 +21,7 @@ import { ConciergePanel } from "../components/ConciergePanel";
 import { FrictionPanel } from "../components/FrictionPanel";
 import { PresentPanel } from "../components/PresentPanel";
 import { CafePanel } from "../components/CafePanel";
+import { UsagePanel } from "../components/UsagePanel";
 import { useThreadSocket } from "../hooks/useThreadSocket";
 import { useWorkspaceData } from "../hooks/useWorkspaceData";
 import { useVisibleCafeRuntime } from "../hooks/useVisibleCafeRuntime";
@@ -42,7 +43,8 @@ type CatalogTab =
   | "receipts"
   | "settings"
   | "skills"
-  | "tools";
+  | "tools"
+  | "usage";
 
 /**
  * Chat shell: warm three-cat lounge layout over workspace data + WS bubbles.
@@ -149,6 +151,8 @@ export function App() {
     activeId,
     catalogTab === "cafe",
   );
+  // A new usage-bearing bubble in the live thread refreshes the Usage panel immediately.
+  const usageRefreshKey = messages.filter((m) => m.usage).length;
   const messagesEnd = useRef<HTMLDivElement | null>(null);
   const guideEchoScope = useRef<GuidedEchoScope | null>(null);
   const activeThread = threads.find((t) => t.id === activeId) ?? null;
@@ -419,6 +423,7 @@ export function App() {
                 ["frictions", "Friction"],
                 ["present", "Present"],
                 ["cafe", "Café"],
+                ["usage", "Usage"],
                 ["evidence", "Memory"],
                 ["lanes", "Lanes"],
                 ["receipts", "Receipts"],
@@ -713,6 +718,14 @@ export function App() {
                 messages={messages}
                 wsState={wsState}
                 runtime={cafeRuntime}
+              />
+            ) : null}
+
+            {catalogTab === "usage" ? (
+              <UsagePanel
+                cats={cats}
+                activeThreadId={activeId}
+                refreshKey={usageRefreshKey}
               />
             ) : null}
 

@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { PlatformEvent } from "@mac/shared";
 import type { AppDeps } from "./deps.js";
+import { attachUsage } from "./routes-usage.js";
 
 /**
  * Register the WebSocket hydrate + subscribe endpoint (transport cell).
@@ -27,7 +28,7 @@ export function registerWsRoutes(app: FastifyInstance, deps: AppDeps): void {
         return;
       }
       const afterSeq = Number(req.query.afterSeq ?? 0) || 0;
-      const messages = await store.listMessages(threadId, afterSeq);
+      const messages = attachUsage(await store.listMessages(threadId, afterSeq), deps.usage);
       const hydrated: PlatformEvent = {
         type: "thread.hydrated",
         threadId,

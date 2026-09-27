@@ -40,6 +40,7 @@ import type {
   QueueEntry,
   TurnExecution,
   UpdatePresentPolicyInput,
+  UsageSummary,
 } from "@mac/shared";
 import { apiJson, apiJsonAccept202 } from "./http";
 
@@ -867,4 +868,19 @@ export function tickPresents(
       body: JSON.stringify({ threadId }),
     },
   );
+}
+
+/**
+ * GET /api/usage — M29 token totals, per-cat/provider/day buckets, recent turns.
+ * @param query.days - UTC day window including today (server clamps to 1..90)
+ * @param query.threadId - Optional thread scope; omit for all threads
+ * @returns Usage summary from the append-only ledger
+ */
+export function fetchUsageSummary(query: {
+  days: number;
+  threadId?: string | null;
+}): Promise<UsageSummary> {
+  const params = new URLSearchParams({ days: String(query.days) });
+  if (query.threadId) params.set("threadId", query.threadId);
+  return apiJson<UsageSummary>(`/api/usage?${params.toString()}`);
 }

@@ -18,6 +18,7 @@ import type { PresentService } from "../present/present-service.js";
 import type { ToolRegistry } from "../mcp/tool-registry.js";
 import type { SkillRegistry } from "../skills/skill-registry.js";
 import type { MacStore } from "../store/types.js";
+import type { UsageStore } from "../usage/usage-store.js";
 import type { ThreadHub } from "../ws/thread-hub.js";
 
 /**
@@ -67,4 +68,6 @@ export interface AppDeps {
   frictions?: FrictionStore;
   /** M27 bounded proactive relationship loop. */
   presents?: PresentService;
+  /** M29 append-only token usage ledger. */
+  usage?: UsageStore;
 }

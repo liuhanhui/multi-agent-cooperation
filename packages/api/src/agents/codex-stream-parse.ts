@@ -1,10 +1,12 @@
 import type { CliLineParseResult } from "./cli-line-stream.js";
+import { makeTokenUsage, readUsageCounts } from "./usage-parse.js";
 
 /**
  * Parse one `codex exec --json` NDJSON line into a normalized stream hint.
- * Prefers agent_message item completions; surfaces turn.failed / error.
+ * Prefers agent_message item completions; surfaces turn.failed / error; reads
+ * token usage from turn.completed.
  * @param line - Raw stdout line
- * @returns delta | final | fail | ignore
+ * @returns delta | final | fail | usage | ignore
  */
 export function parseCodexLine(line: string): CliLineParseResult {
   const trimmed = line.trim();
@@ -27,6 +29,12 @@ export function parseCodexLine(line: string): CliLineParseResult {
         ? (err as { message: string }).message
         : "codex turn failed";
     return { kind: "fail", error: message };
+  }
+
+  // turn.completed carries usage; Codex input_tokens already includes cached_input_tokens.
+  if (type === "turn.completed") {
+    const counts = readUsageCounts(obj.usage, true);
+    return counts ? { kind: "usage", usage: makeTokenUsage("codex", counts) } : { kind: "ignore" };
   }
 
   if (type === "error") {

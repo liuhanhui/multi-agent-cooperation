@@ -4,6 +4,7 @@ import { avatarInitials, avatarTone } from "../chat/avatar";
 import { resolveCatBreed } from "../chat/cat-breed";
 import { CatPortrait } from "./CatPortrait";
 import { ContentBlocks } from "./ContentBlocks";
+import { usageChipLabel, usageTooltip } from "../features/usage/format-usage";
 
 interface BubbleProps {
   message: Message;
@@ -25,7 +26,7 @@ function formatElapsed(totalSeconds: number): string {
 }
 
 /**
- * One chat bubble with avatar, status, optional live CLI progress, body, and rich blocks.
+ * One chat bubble with avatar, status, token usage chip (M29), optional live CLI progress, body, and rich blocks.
  * @param props.message - Bubble from the reducer (may include progress/blocks)
  * @param props.cats - Registry for display names / tones
  * @param props.onBlockAction - Optional checklist/decision write-back
@@ -103,6 +104,14 @@ export function Bubble({ message, cats, onBlockAction, actionBusy }: BubbleProps
               {inFlight ? ` · ${formatElapsed(elapsedSec)}` : ""}
               {cat?.provider ? ` · ${cat.provider}` : ""}
             </span>
+            {message.usage ? (
+              <span
+                className={`usage-chip${message.usage.estimated ? " estimated" : ""}`}
+                title={usageTooltip(message.usage)}
+              >
+                {usageChipLabel(message.usage)}
+              </span>
+            ) : null}
           </header>
           {progressLine ? (
             <p className="bubble-progress" role="status" aria-live="polite">

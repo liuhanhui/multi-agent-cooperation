@@ -1,8 +1,13 @@
 import { randomUUID } from "node:crypto";
-import type { Message, TurnExecutionStatus } from "@mac/shared";
+import type { Message, TokenUsage, TurnExecutionStatus } from "@mac/shared";
 import type { MacStore } from "../store/types.js";
+import type { UsageStore } from "../usage/usage-store.js";
 import type { ThreadHub } from "../ws/thread-hub.js";
 import type { AgentProvider } from "./types.js";
+import { sumTokenUsage } from "./usage-parse.js";
+
+/** M29 ledger sink; only `record` is needed so tests can pass a stub. */
+export type UsageRecorder = Pick<UsageStore, "record">;
 
 export interface RunInvocationParams {
   store: MacStore;
@@ -66,6 +71,8 @@ export interface RunRoutedInvocationParams {
   awaitCompletion?: boolean;
   /** Optional turn start/end hook for TurnExecutionStore. */
   onTurn?: (event: TurnHookEvent) => void;
+  /** M29: persist per-turn token usage when the CLI reports it. */
+  usage?: UsageRecorder;
 }
 
 export interface RunRoutedInvocationResult {
@@ -94,6 +101,7 @@ async function streamExistingAssistant(params: {
   callbackUrl?: string;
   callbackToken?: string;
   callbackExpiresAt?: string;
+  usage?: UsageRecorder;
 }): Promise<Message> {
   const {
     store,
@@ -110,6 +118,28 @@ async function streamExistingAssistant(params: {
     callbackToken,
     callbackExpiresAt,
   } = params;
+  const usageEvents: TokenUsage[] = [];
+
+  /**
+   * Sum this turn's usage events, persist once, and return the projection to attach.
+   * Accounting is best-effort: a ledger error must never fail the agent turn.
+   * @returns Combined usage, or undefined when the CLI reported none
+   */
+  const settleUsage = (): TokenUsage | undefined => {
+    if (usageEvents.length === 0) return undefined;
+    const combined = sumTokenUsage(usageEvents);
+    try {
+      params.usage?.record({
+        messageId: assistantMessage.id,
+        threadId,
+        catId: assistantMessage.authorId,
+        usage: combined,
+      });
+    } catch {
+      // Ledger unavailable — still show usage on the live bubble.
+    }
+    return combined;
+  };
 
   const failCancelled = async (): Promise<Message> => {
     const current = await store.getMessage(assistantMessage.id);
@@ -176,12 +206,17 @@ async function streamExistingAssistant(params: {
           seq: updated.seq,
           delta: event.text,
         });
+      } else if (event.type === "usage") {
+        // Adapters emit usage before terminal; settled together with the bubble.
+        usageEvents.push(event.usage);
       } else if (event.type === "completed") {
         sawTerminal = true;
         terminal = await store.completeMessage(
           assistantMessage.id,
           event.text.length > 0 ? event.text : undefined,
         );
+        const usage = settleUsage();
+        if (usage) terminal = { ...terminal, usage };
         hub.publish(threadId, { type: "message.completed", message: terminal });
       } else if (event.type === "failed") {
         sawTerminal = true;
@@ -189,6 +224,9 @@ async function streamExistingAssistant(params: {
         const err =
           signal?.aborted || event.error === "aborted" ? "cancelled" : event.error;
         terminal = await store.failMessage(assistantMessage.id, err);
+        // Failed turns still spent tokens when the CLI got far enough to report them.
+        const usage = settleUsage();
+        if (usage) terminal = { ...terminal, usage };
         hub.publish(threadId, {
           type: "message.failed",
           message: terminal,
@@ -245,6 +283,7 @@ async function runAssistantTurn(params: {
   callbackExpiresAt?: string;
   attempt: number;
   onTurn?: (event: TurnHookEvent) => void;
+  usage?: UsageRecorder;
 }): Promise<Message> {
   const turnId = randomUUID();
   params.onTurn?.({
@@ -288,6 +327,7 @@ async function runAssistantTurn(params: {
     callbackUrl: params.callbackUrl,
     callbackToken: params.callbackToken,
     callbackExpiresAt: params.callbackExpiresAt,
+    usage: params.usage,
   });
 
   const status: TurnExecutionStatus =
@@ -335,6 +375,7 @@ export async function runRoutedInvocation(
     callbackExpiresAt,
     awaitCompletion = false,
     onTurn,
+    usage,
   } = params;
   // CLI sees agentPrompt; Hub bubble keeps the short operator prompt.
   const agentPrompt = params.agentPrompt ?? prompt;
@@ -376,6 +417,7 @@ export async function runRoutedInvocation(
         callbackExpiresAt,
         attempt,
         onTurn,
+        usage,
       });
       assistants.push(terminal);
       attempt += 1;
@@ -438,6 +480,7 @@ export async function runRoutedInvocation(
       callbackUrl,
       callbackToken,
       callbackExpiresAt,
+      usage,
     });
     const status: TurnExecutionStatus =
       terminal.status === "completed"
@@ -476,6 +519,7 @@ export async function runRoutedInvocation(
         callbackExpiresAt,
         attempt,
         onTurn,
+        usage,
       });
       attempt += 1;
       if (next.status !== "completed") break;
