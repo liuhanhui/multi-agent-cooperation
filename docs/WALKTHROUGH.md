@@ -83,6 +83,14 @@ Visible Café:
    running cat from later queued cats; completion returns it to ready.
 4. Change the default cat and confirm the desk follows the thread contract.
 
+Token usage:
+
+1. Invoke a cat; when the bubble completes its header shows a token chip
+   (`~N tok` means an estimate from the fake provider). Hover for the breakdown.
+2. Open **Usage**: totals, daily bars, per-cat and per-provider split, recent
+   turns. Toggle **This thread** and **Today / 7d / 30d**.
+3. Reload the page and restart the API; chips and totals are unchanged.
+
 Finally:
 
 ```powershell

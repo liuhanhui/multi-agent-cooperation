@@ -1,4 +1,5 @@
 /** Agent adapter contracts (M04). */
+import type { TokenUsage } from "@mac/shared";
 
 export type AgentProgressPhase = "spawning" | "running" | "stdout" | "waiting";
 
@@ -7,7 +8,12 @@ export type AgentStreamEvent =
   | { type: "completed"; text: string }
   | { type: "failed"; error: string }
   /** Non-terminal status for Hub (CLI spawn / first output). */
-  | { type: "progress"; phase: AgentProgressPhase; detail: string };
+  | { type: "progress"; phase: AgentProgressPhase; detail: string }
+  /**
+   * M29 token counts. Must be yielded before the terminal event; a turn may emit
+   * several (e.g. multi-step Codex runs) and the runner sums them.
+   */
+  | { type: "usage"; usage: TokenUsage };
 export interface AgentInvokeInput {
   prompt: string;
   threadId: string;

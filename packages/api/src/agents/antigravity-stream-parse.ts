@@ -1,8 +1,10 @@
 import type { CliLineParseResult } from "./cli-line-stream.js";
+import { makeTokenUsage, readUsageCounts } from "./usage-parse.js";
 
 /**
  * Parse one `agy -p --output-format stream-json` NDJSON line.
- * Emits text_delta from agent_response steps; final response from result.
+ * Emits text_delta from agent_response steps; final response (plus usage when
+ * the result reports one) from result.
  * @param line - Raw stdout line
  * @returns delta | final | fail | ignore
  */
@@ -42,7 +44,17 @@ export function parseAntigravityLine(line: string): CliLineParseResult {
       return { kind: "fail", error: message };
     }
     if (typeof result.response === "string") {
-      return { kind: "final", text: result.response };
+      // Usage shape is unverified for agy; accept common spellings, omit when absent.
+      const counts = readUsageCounts(result.usage ?? obj.usage, false);
+      return counts
+        ? {
+            kind: "final",
+            text: result.response,
+            usage: makeTokenUsage("antigravity", counts, {
+              model: typeof result.model === "string" ? result.model : null,
+            }),
+          }
+        : { kind: "final", text: result.response };
     }
   }
 

@@ -883,3 +883,54 @@ test("invoke injects matched skill and skips when no trigger", async () => {
     await app.close();
   }
 });
+
+test("M29 turn usage is recorded, attached to the bubble, and summarized", async () => {
+  const agent = createFakeAgentProvider({ chunks: ["abcd"], delayMs: 0, estimateUsage: true });
+  const { app, port } = await listen(agent);
+  try {
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/threads",
+      payload: { title: "usage" },
+    });
+    const threadId = (created.json() as { thread: Thread }).thread.id;
+    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws?threadId=${threadId}`);
+    await onceEvent(ws, "thread.hydrated");
+    const completed = onceEvent(ws, "message.completed");
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/threads/${threadId}/messages/invoke`,
+      payload: { content: "count me" },
+    });
+    assert.equal(res.statusCode, 202);
+    const event = await completed;
+    ws.close();
+    assert.ok(event.type === "message.completed");
+    // Live bubble carries usage without a second fetch.
+    assert.equal(event.message.usage?.estimated, true);
+    assert.equal(event.message.usage?.outputTokens, 1);
+
+    // Reload path joins the ledger onto the stored message.
+    const listed = await app.inject({ method: "GET", url: `/api/threads/${threadId}/messages` });
+    const messages = (listed.json() as { messages: Array<{ id: string; usage?: { totalTokens: number } }> })
+      .messages;
+    const assistant = messages.find((m) => m.id === event.message.id);
+    assert.equal(assistant?.usage?.totalTokens, event.message.usage?.totalTokens);
+
+    const summary = await app.inject({ method: "GET", url: `/api/usage?days=1&threadId=${threadId}` });
+    assert.equal(summary.statusCode, 200);
+    const body = summary.json() as {
+      totals: { turns: number; estimatedTurns: number };
+      byCat: Array<{ key: string }>;
+    };
+    assert.equal(body.totals.turns, 1);
+    assert.equal(body.totals.estimatedTurns, 1);
+    assert.deepEqual(body.byCat.map((b) => b.key), ["architect"]);
+
+    const missing = await app.inject({ method: "GET", url: "/api/usage?threadId=nope" });
+    assert.equal(missing.statusCode, 404);
+  } finally {
+    await app.close();
+  }
+});

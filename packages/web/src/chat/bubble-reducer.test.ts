@@ -114,3 +114,33 @@ test("message.progress attaches hint and promotes pending to streaming", () => {
   assert.equal(state[0]?.content, "hi");
   assert.equal(state[0]?.progress, undefined);
 });
+
+test("message.updated without usage keeps usage from message.completed", () => {
+  const usage = {
+    provider: "codex",
+    model: null,
+    inputTokens: 10,
+    outputTokens: 5,
+    cacheReadTokens: 0,
+    cacheWriteTokens: 0,
+    totalTokens: 15,
+    costUsd: null,
+    estimated: false,
+  };
+  let state = bubbleReducer([], {
+    type: "event",
+    event: {
+      type: "message.completed",
+      message: msg({ id: "m1", seq: 1, status: "completed", content: "done", usage }),
+    },
+  });
+  state = bubbleReducer(state, {
+    type: "event",
+    event: {
+      type: "message.updated",
+      message: msg({ id: "m1", seq: 1, status: "completed", content: "done (edited)" }),
+    },
+  });
+  assert.equal(state[0]?.content, "done (edited)");
+  assert.equal(state[0]?.usage?.totalTokens, 15);
+});

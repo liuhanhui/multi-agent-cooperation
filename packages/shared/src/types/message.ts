@@ -1,4 +1,5 @@
 import type { ContentBlock } from "./content-block.js";
+import type { TokenUsage } from "./usage.js";
 
 export type MessageRole = "user" | "assistant" | "system" | "tool";
 export type MessageStatus = "pending" | "streaming" | "completed" | "failed";
@@ -19,6 +20,11 @@ export interface Message {
   progress?: string;
   /** Structured Hub blocks (checklist / decision / diff / card) — M14. */
   blocks?: ContentBlock[];
+  /**
+   * M29 token usage for this assistant turn. Read-side projection joined from the
+   * usage ledger (never stored on the message itself); absent when the CLI reported none.
+   */
+  usage?: TokenUsage;
   createdAt: string;
   updatedAt: string;
 }

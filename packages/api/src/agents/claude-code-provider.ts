@@ -5,6 +5,7 @@ import {
   extractClaudeAssistantText,
   extractClaudeDelta,
   extractClaudeResultText,
+  extractClaudeUsage,
 } from "./claude-stream-parse.js";
 import {
   prepareSpawnArgs,
@@ -112,6 +113,9 @@ export function createClaudeCodeProvider(opts: ClaudeCodeProviderOptions = {}): 
           }
           const result = extractClaudeResultText(line);
           if (result) finalText = result;
+          // Result line also carries run usage; queue it ahead of the terminal event.
+          const usage = extractClaudeUsage(line);
+          if (usage) push({ type: "usage", usage });
         });
       }
 

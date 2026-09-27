@@ -37,6 +37,8 @@ function applyPlatformEvent(state: Message[], event: PlatformEvent): Message[] {
           event.type === "message.completed" || event.type === "message.failed"
             ? undefined
             : event.message.progress,
+        // Usage is a read-side join; store-sourced updates (Hub actions) omit it.
+        usage: event.message.usage ?? state.find((m) => m.id === event.message.id)?.usage,
       });
     case "message.delta":
       return mergeDelta(state, event.messageId, event.threadId, event.seq, event.delta);

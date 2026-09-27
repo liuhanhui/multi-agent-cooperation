@@ -1,5 +1,6 @@
 import { execFileSync, spawn } from "node:child_process";
 import { createInterface } from "node:readline";
+import type { TokenUsage } from "@mac/shared";
 import type { AgentStreamEvent } from "./types.js";
 
 /**
@@ -8,8 +9,11 @@ import type { AgentStreamEvent } from "./types.js";
  */
 export type CliLineParseResult =
   | { kind: "delta"; text: string }
-  | { kind: "final"; text: string }
+  /** `usage` is set when the same line also reports token counts (e.g. Antigravity result). */
+  | { kind: "final"; text: string; usage?: TokenUsage }
   | { kind: "fail"; error: string }
+  /** M29 token counts for this run (non-terminal). */
+  | { kind: "usage"; usage: TokenUsage }
   | { kind: "ignore" };
 
 export interface RunCliNdjsonParams {
@@ -196,6 +200,9 @@ export async function* runCliNdjson(
         push({ type: "delta", text: result.text });
       } else if (result.kind === "final") {
         finalText = result.text;
+        if (result.usage) push({ type: "usage", usage: result.usage });
+      } else if (result.kind === "usage") {
+        push({ type: "usage", usage: result.usage });
       } else if (result.kind === "fail") {
         failed = result.error;
         child.kill();

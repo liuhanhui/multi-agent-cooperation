@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { InvocationCredential, QueueEntry, TurnExecution } from "@mac/shared";
 import type { AgentProvider } from "../agents/types.js";
-import { runRoutedInvocation } from "../agents/run-invocation.js";
+import { runRoutedInvocation, type UsageRecorder } from "../agents/run-invocation.js";
 import type { InvocationCredentialStore } from "../callback-auth/credential-store.js";
 import type { ReceiptStore } from "../receipts/receipt-store.js";
 import type { MacStore } from "../store/types.js";
@@ -45,6 +45,8 @@ export interface DispatcherDeps {
   publicBaseUrl?: string;
   /** M18 per-target delivery receipts + freshness. */
   receipts?: ReceiptStore;
+  /** M29 per-turn token ledger. */
+  usage?: UsageRecorder;
   /** Optional M09 handoff service for auto-review after completion. */
   handoffs?: {
     createAutoReview: (params: {
@@ -313,6 +315,7 @@ export class InvocationDispatcher {
         callbackToken: credential?.token,
         callbackExpiresAt: credential?.expiresAt,
         onTurn: (event) => this.handleTurnEvent(entryId, entry.threadId, event),
+        usage: this.deps.usage,
       });
 
       // Attach source user message to the batch once known.

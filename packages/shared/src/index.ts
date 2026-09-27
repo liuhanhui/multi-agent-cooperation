@@ -185,4 +185,11 @@ export {
   type PresentTickResult,
   type UpdatePresentPolicyInput,
 } from "./types/present.js";
+export {
+  type TokenUsage,
+  type UsageBucket,
+  type UsageRecord,
+  type UsageSummary,
+  type UsageTotals,
+} from "./types/usage.js";
 

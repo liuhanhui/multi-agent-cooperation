@@ -28,7 +28,9 @@ import { registerGithubRoutes } from "./http/routes-github.js";
 import { registerPluginRoutes } from "./http/routes-plugins.js";
 import { registerFrictionRoutes } from "./http/routes-frictions.js";
 import { registerPresentRoutes } from "./http/routes-presents.js";
+import { registerUsageRoutes } from "./http/routes-usage.js";
 import { registerWsRoutes } from "./http/routes-ws.js";
+import { UsageStore } from "./usage/usage-store.js";
 import { ApprovalStore } from "./approval/approval-store.js";
 import { BallCustodyStore } from "./custody/ball-custody-store.js";
 import { GithubBindingStore } from "./github/binding-store.js";
@@ -127,6 +129,12 @@ export interface AppOptions {
   disablePresents?: boolean;
   /** Disable only the periodic scheduler while retaining routes. */
   disablePresentScheduler?: boolean;
+  /** Optional UsageStore (tests). */
+  usage?: UsageStore;
+  /** Usage SQLite path override (default `:memory:`; production passes a durable path). */
+  usageDbPath?: string;
+  /** Disable token usage ledger (rare; tests). */
+  disableUsage?: boolean;
 }
 
 /**
@@ -202,6 +210,13 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     opts.githubBindings ??
     (opts.disableGithub ? undefined : new GithubBindingStore());
 
+  const ownsUsageStore = !opts.usage && !opts.disableUsage;
+  const usageStore =
+    opts.usage ??
+    (opts.disableUsage
+      ? undefined
+      : new UsageStore({ dbPath: opts.usageDbPath ?? ":memory:" }));
+
   const dispatcher = opts.agent
     ? new InvocationDispatcher({
         store: opts.store,
@@ -211,6 +226,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
         credentials,
         publicBaseUrl,
         receipts: receiptStore,
+        usage: usageStore,
       })
     : undefined;
 
@@ -282,6 +298,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   app.addHook("onClose", async () => {
     presentService?.stop();
     if (ownsPresentStore) presentStore?.close();
+    if (ownsUsageStore) usageStore?.close();
   });
 
   const deps: AppDeps = {
@@ -309,6 +326,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     plugins: pluginHost,
     frictions: frictionStore,
     presents: presentService,
+    usage: usageStore,
   };
 
   // Restart safety: pending/streaming bubbles → failed(orphan-recovered).
@@ -337,6 +355,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   registerPluginRoutes(app, deps);
   registerFrictionRoutes(app, deps);
   registerPresentRoutes(app, deps);
+  registerUsageRoutes(app, deps);
   registerWsRoutes(app, deps);
 
   return app;

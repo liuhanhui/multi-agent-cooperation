@@ -5,6 +5,7 @@ import {
   validateContentBlocks,
 } from "@mac/shared";
 import type { AppDeps } from "./deps.js";
+import { attachUsage } from "./routes-usage.js";
 
 /**
  * Register thread + message REST routes (transport / identity / Hub actions).
@@ -94,7 +95,7 @@ export function registerThreadRoutes(app: FastifyInstance, deps: AppDeps): void 
       const thread = await store.getThread(req.params.id);
       if (!thread) return reply.code(404).send({ error: "Thread not found" });
       const afterSeq = Number(req.query.afterSeq ?? 0) || 0;
-      const messages = await store.listMessages(req.params.id, afterSeq);
+      const messages = attachUsage(await store.listMessages(req.params.id, afterSeq), deps.usage);
       return { messages };
     },
   );

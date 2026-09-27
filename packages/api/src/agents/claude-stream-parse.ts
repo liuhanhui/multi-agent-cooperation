@@ -1,3 +1,6 @@
+import type { TokenUsage } from "@mac/shared";
+import { makeTokenUsage, readUsageCounts } from "./usage-parse.js";
+
 /**
  * Parse one NDJSON line from `claude -p --output-format stream-json --include-partial-messages`.
  * Returns text deltas when present; ignores unrelated events.
@@ -47,6 +50,39 @@ export function extractClaudeResultText(line: string): string | null {
     if (typeof content === "string") return content;
   }
   return null;
+}
+
+/**
+ * Token usage from the stream-json `result` line (Claude reports it once per run).
+ * `usage.input_tokens` excludes cache reads; `total_cost_usd` is the run cost;
+ * `modelUsage` is keyed by model name.
+ * @param line - Raw stdout line
+ * @returns Normalized TokenUsage, or null for any other line / missing usage
+ */
+export function extractClaudeUsage(line: string): TokenUsage | null {
+  const trimmed = line.trim();
+  if (!trimmed) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== "object") return null;
+  const obj = parsed as Record<string, unknown>;
+  if (obj.type !== "result") return null;
+  const counts = readUsageCounts(obj.usage, false);
+  if (!counts) return null;
+  const modelUsage = obj.modelUsage;
+  const model =
+    modelUsage && typeof modelUsage === "object"
+      ? (Object.keys(modelUsage as Record<string, unknown>)[0] ?? null)
+      : null;
+  const cost =
+    typeof obj.total_cost_usd === "number" && Number.isFinite(obj.total_cost_usd)
+      ? obj.total_cost_usd
+      : null;
+  return makeTokenUsage("claude-code", counts, { model, costUsd: cost });
 }
 
 export function extractClaudeAssistantText(line: string): string | null {

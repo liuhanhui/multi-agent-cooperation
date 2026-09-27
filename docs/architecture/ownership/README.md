@@ -36,6 +36,7 @@ Why: one sentence
 | `proactive-relationship-loop` | active | Budgeted idle-thread check-ins + delivery ledger | M27 |
 | `cat-life-settings` | active | Global/per-cat Present switches and limits | M27 |
 | `visible-cafe-render` | active | Read-only café projection of selected thread runtime | M28 |
+| `token-usage-ledger` | active | Per-turn CLI token usage ledger + summaries | M29 |
 
 Ordinary increments: `Map delta: none`. New boundaries require updating this table before merge.
 

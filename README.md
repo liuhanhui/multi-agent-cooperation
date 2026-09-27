@@ -6,7 +6,7 @@ Platform layer **above** Agent CLIs so multiple model families work as one team.
 
 ## Status
 
-**Wave 6 / M28** — Visible Café renders the selected room's live state without a second source of truth.
+**Wave 6 / M29** — Token usage: every cat turn records CLI-reported tokens; see them on bubbles and in the Usage tab.
 
 Roadmap: [`build-plan.md`](./build-plan.md) · Vision: [`docs/VISION.md`](./docs/VISION.md) · Decisions: [`docs/DECISIONS.md`](./docs/DECISIONS.md)
 

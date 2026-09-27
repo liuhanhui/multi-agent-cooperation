@@ -22,6 +22,7 @@ Structure cleanup (`chore/structure-align-cells`): keep Fastify + React; align f
 | `plugin/` + `http/routes-plugins.ts` | plugin | Catalog, install/activate, grants, call receipts |
 | `harness/` + `http/routes-frictions.ts` | harness-eval | Durable friction lifecycle + HTTP boundary |
 | `present/` + `http/routes-presents.ts` | proactive-relationship-loop + cat-life-settings | Policy, budget reservation, scheduler, delivery ledger |
+| `usage/` + `http/routes-usage.ts` + `agents/usage-parse.ts` | token-usage-ledger | CLI usage normalize, append-only ledger, summaries, message join |
 | `callback-auth/` | callback-auth | InvocationCredentialStore + bearer verify |
 | `http/routes-callbacks.ts` | callback-auth | Agent callback ingress + auth-failures |
 | `routing/` | routing-context | mention → catIds policy |
@@ -66,6 +67,7 @@ Structure cleanup (`chore/structure-align-cells`): keep Fastify + React; align f
 | `components/FrictionPanel.tsx` | harness-eval | Capture, verdict, owner response, audit trail |
 | `components/PresentPanel.tsx` | proactive-relationship-loop + cat-life-settings | Master/per-cat controls, limits, usage, activity |
 | `components/CafePanel.tsx` | visible-cafe-render | Read-only selected-room visualization |
+| `components/UsagePanel.tsx` + `hooks/useUsageSummary.ts` + `features/usage/` | token-usage-ledger | Usage tab, bubble chip formatting |
 | `components/ui/FormField.tsx` | presentation | Shared labelled inputs, textareas, and selects |
 | `components/` | presentation | Sidebar / ChatPanel / Bubble / Skills / Tools |
 
@@ -85,6 +87,7 @@ Structure cleanup (`chore/structure-align-cells`): keep Fastify + React; align f
 | `types/plugin.ts` | PluginManifest / grants / call receipts / host capabilities |
 | `types/friction.ts` | Friction lifecycle, verdict, owner response, invariant |
 | `types/present.ts` | Proactive policy, budgeted delivery, tick result |
+| `types/usage.ts` | TokenUsage / UsageRecord / UsageSummary |
 | `mention.ts` | `parseMentions` (routing authority shared with API) |
 | `index.ts` | Barrel re-exports only |
 
